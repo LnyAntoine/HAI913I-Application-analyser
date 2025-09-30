@@ -31,15 +31,6 @@ public class percentClassMethodProcessor extends AbstractProcessor<CtClass<?>> {
             result.add(array.get(i));
         }
 
-        /*
-        System.out.println("=== tout array ===");
-        System.out.println("=== "+array.size()+" ===");
-        for (String s : array) {
-            System.out.println(s + " " + map.get(s));
-        }
-        */
-
-
         System.out.println("=== Résumé de l'analyse percentClassMethodProcessor===");
         for (String s : result) {
             System.out.println(s + " " + map.get(s));

@@ -18,4 +18,5 @@ public class nbLineProcessor extends AbstractProcessor<CtType<?>> {
         System.out.println("=== Résumé de l'analyse ===");
         System.out.println("Nombre de lignes : " + counter);
     }
+
 }

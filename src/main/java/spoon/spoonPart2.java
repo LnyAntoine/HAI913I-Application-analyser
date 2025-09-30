@@ -1,14 +1,17 @@
 package spoon;
 
 import spoon.processor.*;
+import spoon.reflect.CtModel;
+import spoon.visitor.callGraphVisitor;
 
 public class spoonPart2 {
     public static void main(String[] args) {
 
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
         Launcher launcher = new Launcher();
-        launcher.addInputResource("exo2/server2/src/main/java/");
-        launcher.addInputResource("exo2/common2/src/main/java");
+        launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2/server2/src/main/java/");
+        //launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2/common2/src/main/java");
+        //launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\HAI913I\\Spoon\\src\\main\\java");
         launcher.addProcessor(new nbClassProcessor());
         launcher.addProcessor(new nbLineProcessor());
         launcher.addProcessor(new nbMethodProcessor());
@@ -25,6 +28,10 @@ public class spoonPart2 {
         processor.setParam(3);
         launcher.addProcessor(processor);
         launcher.run();
+        CtModel model = launcher.getModel();
+        callGraphVisitor visitor = new callGraphVisitor();
+        model.getAllTypes().forEach(type->type.accept(visitor));
+        System.out.println(visitor.getHashMapToString());
     }
 
 }
