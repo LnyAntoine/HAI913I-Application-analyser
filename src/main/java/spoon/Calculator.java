@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 public class Calculator {
     private final calculatorVisitor visitor;
+    private final Map<String, String> methodMessages = new HashMap<>();
 
     public void setX(int x) {
         this.x = x;
@@ -32,44 +33,67 @@ public class Calculator {
         maxParameterMethod();
     }
     public void calculateNbClass(){
-        System.out.println("Nombre de classes : " + visitor.getTotalClassesCounter());
+        String msg = "Nombre de classes : " + visitor.getTotalClassesCounter();
+        System.out.println(msg);
+        methodMessages.put("calculateNbClass", msg);
     }
 
     public void calculateNbLine(){
-        System.out.println("Nombre de lignes : " + visitor.getTotalLineCounter());
+        String msg = "Nombre de lignes : " + visitor.getTotalLineCounter();
+        System.out.println(msg);
+        methodMessages.put("calculateNbLine", msg);
     }
 
     public void calculateNbMethod(){
-        System.out.println("Nombre de méthodes : " + visitor.getTotalMethodsCounter());
+        String msg = "Nombre de méthodes : " + visitor.getTotalMethodsCounter();
+        System.out.println(msg);
+        methodMessages.put("calculateNbMethod", msg);
     }
 
     public void calculateNbPackage(){
-        System.out.println("Nombre de packages : " + visitor.getTotalPackageCounter());
+        String msg = "Nombre de packages : " + visitor.getTotalPackageCounter();
+        System.out.println(msg);
+        methodMessages.put("calculateNbPackage", msg);
     }
 
     public void calculateAverageMethodPerClass(){
+        String msg;
         if (visitor.getTotalClassesCounter() == 0) {
-            System.out.println("Moyenne de méthodes par classe : 0");
+            msg = "Moyenne de méthodes par classe : 0";
+            System.out.println(msg);
+            methodMessages.put("calculateAverageMethodPerClass", msg);
             return;
         }
         double average = (double) visitor.getTotalMethodsCounter() / visitor.getTotalClassesCounter();
-        System.out.println("Moyenne de méthodes par classe : " + average);
+        msg = "Moyenne de méthodes par classe : " + average;
+        System.out.println(msg);
+        methodMessages.put("calculateAverageMethodPerClass", msg);
     }
     public void calculateAverageLinePerMethod(){
+        String msg;
         if (visitor.getTotalMethodsCounter() == 0) {
-            System.out.println("Moyenne de lignes par méthode : 0");
+            msg = "Moyenne de lignes par méthode : 0";
+            System.out.println(msg);
+            methodMessages.put("calculateAverageLinePerMethod", msg);
             return;
         }
         double average = (double) visitor.getTotalMethodLineCounter() / visitor.getTotalMethodsCounter();
-        System.out.println("Moyenne de lignes par méthode : " + average);
+        msg = "Moyenne de lignes par méthode : " + average;
+        System.out.println(msg);
+        methodMessages.put("calculateAverageLinePerMethod", msg);
     }
     public void calculateAverageAttributePerClass(){
+        String msg;
         if (visitor.getTotalClassesCounter() == 0) {
-            System.out.println("Moyenne d'attributs par classe : 0");
+            msg = "Moyenne d'attributs par classe : 0";
+            System.out.println(msg);
+            methodMessages.put("calculateAverageAttributePerClass", msg);
             return;
         }
         double average = (double) visitor.getTotalFieldsCounter() / visitor.getTotalClassesCounter();
-        System.out.println("Moyenne d'attributs par classe : " + average);
+        msg = "Moyenne d'attributs par classe : " + average;
+        System.out.println(msg);
+        methodMessages.put("calculateAverageAttributePerClass", msg);
     }
     public void calculateTop10PercentNbMethodPerClass(){
         HashMap<String, Integer> map = visitor.getClassMethodCountMap();
@@ -81,10 +105,14 @@ public class Calculator {
         for (int i = array.size()-1; i >= nbTop; i--) {
             result.add(array.get(i));
         }
-        System.out.println("Top 10% des classes avec le plus de méthodes :");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Top 10% des classes avec le plus de méthodes :\n");
         for (String s : result) {
-            System.out.println(s + " " + map.get(s));
+            sb.append(s).append(" ").append(map.get(s)).append("\n");
         }
+        String msg = sb.toString();
+        System.out.print(msg);
+        methodMessages.put("calculateTop10PercentNbMethodPerClass", msg);
     }
 
     public void calculateTop10PercentNbAttributePerClass(){
@@ -96,10 +124,14 @@ public class Calculator {
         for (int i = array.size()-1; i >= nbTop; i--) {
             result.add(array.get(i));
         }
-        System.out.println("Top 10% des classes avec le plus d'attributs :");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Top 10% des classes avec le plus d'attributs :\n");
         for (String s : result) {
-            System.out.println(s + " " + map.get(s));
+            sb.append(s).append(" ").append(map.get(s)).append("\n");
         }
+        String msg = sb.toString();
+        System.out.print(msg);
+        methodMessages.put("calculateTop10PercentNbAttributePerClass", msg);
     }
 
     public void calculateTop10PercentNbAttributeMethodePerClass(){
@@ -122,12 +154,16 @@ public class Calculator {
             resultAttribute.add(arrayAttribute.get(i));
         }
 
-        System.out.println("Top 10% des classes avec le plus d'attributs et de méthodes :");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Top 10% des classes avec le plus d'attributs et de méthodes :\n");
         for (String s : resultMethod) {
             if (resultAttribute.contains(s)) {
-                System.out.println(s + " - Nb d'attributs : " + mapAttribute.get(s) + " - Nb de méthodes :" + mapMethod.get(s));
+                sb.append(s).append(" - Nb d'attributs : ").append(mapAttribute.get(s)).append(" - Nb de méthodes :").append(mapMethod.get(s)).append("\n");
             }
         }
+        String msg = sb.toString();
+        System.out.print(msg);
+        methodMessages.put("calculateTop10PercentNbAttributeMethodePerClass", msg);
     }
 
     public void moreThanXMethods(){
@@ -139,10 +175,14 @@ public class Calculator {
                 result.add(s);
             }
         }
-        System.out.println("Classes avec plus de " + x + " méthodes :");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Classes avec plus de ").append(x).append(" méthodes :\n");
         for (String s : result) {
-            System.out.println(s + " " + map.get(s));
+            sb.append(s).append(" ").append(map.get(s)).append("\n");
         }
+        String msg = sb.toString();
+        System.out.print(msg);
+        methodMessages.put("moreThanXMethods", msg);
     }
 
     public void calculateTop10PercentMethodPerLinPerClass(){
@@ -167,17 +207,27 @@ public class Calculator {
             }
         }
 
-        System.out.println("Les méthodes pour chaque classes avec le plus de lignes (top 10%) :");
+        StringBuilder sb = new StringBuilder();
+        sb.append("Les méthodes pour chaque classes avec le plus de lignes (top 10%) :\n");
         for (Map.Entry<String, ArrayList<String>> entry : result.entrySet()) {
-            System.out.println(entry.getKey() + ": ");
+            sb.append(entry.getKey()).append(": ").append("\n");
             for (String methodName : entry.getValue()) {
-                System.out.println("\t"+methodName + " : "+map.get(entry.getKey()).get(methodName));
+                sb.append("\t").append(methodName).append(" : ").append(map.get(entry.getKey()).get(methodName)).append("\n");
             }
         }
+        String msg = sb.toString();
+        System.out.print(msg);
+        methodMessages.put("calculateTop10PercentMethodPerLinPerClass", msg);
     }
 
     public void maxParameterMethod(){
-        System.out.println("Le nombre maximum de paramètres dans une méthode : " + visitor.getMaxParameterCounter());
+        String msg = "Le nombre maximum de paramètres dans une méthode : " + visitor.getMaxParameterCounter();
+        System.out.println(msg);
+        methodMessages.put("maxParameterMethod", msg);
+    }
+
+    public String getMessageForMethod(String methodName) {
+        return methodMessages.getOrDefault(methodName, "");
     }
 
     public ArrayList<String> trierParValeurCroissant(Map<String, Integer> map) {
