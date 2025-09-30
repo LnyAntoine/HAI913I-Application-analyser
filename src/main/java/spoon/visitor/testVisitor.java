@@ -8,16 +8,16 @@ import java.util.HashMap;
 
 public class testVisitor extends CtScanner {
 
-    static int totalClassesCounter = 0;
-    static int totalFieldsCounter = 0;
-    static int totalMethodsCounter = 0;
-    static int totalMethodLineCounter = 0;
-    static int maxParameterCounter = 0;
-    static int totalLineCounter = 0;
-    static int totalPackageCounter = 0;
-    static HashMap<String, Integer> classMethodCountMap = new HashMap<>();
-    static HashMap<String, Integer> classAttributeCountMap = new HashMap<>();
-    static HashMap<String, HashMap<String, Integer>> linePerMethodPerClass = new HashMap<>();
+    private int totalClassesCounter = 0;
+    private int totalFieldsCounter = 0;
+    private int totalMethodsCounter = 0;
+    private int totalMethodLineCounter = 0;
+    private int maxParameterCounter = 0;
+    private int totalLineCounter = 0;
+    private int totalPackageCounter = 0;
+    private final HashMap<String, Integer> classMethodCountMap = new HashMap<>();
+    private final HashMap<String, Integer> classAttributeCountMap = new HashMap<>();
+    private final HashMap<String, HashMap<String, Integer>> linePerMethodPerClass = new HashMap<>();
 
     @Override
     public <T> void visitCtClass(CtClass<T> ctClass) {
@@ -68,7 +68,6 @@ public class testVisitor extends CtScanner {
         totalFieldsCounter++;
     }
 
-
     @Override
     public <T> void visitCtMethod(CtMethod<T> m) {
         super.visitCtMethod(m);
@@ -91,5 +90,45 @@ public class testVisitor extends CtScanner {
     public void visitCtPackage(CtPackage ctPackage) {
         super.visitCtPackage(ctPackage);
         totalPackageCounter++;
+    }
+
+    public int getTotalClassesCounter() {
+        return totalClassesCounter;
+    }
+
+    public int getTotalFieldsCounter() {
+        return totalFieldsCounter;
+    }
+
+    public int getTotalMethodsCounter() {
+        return totalMethodsCounter;
+    }
+
+    public int getTotalMethodLineCounter() {
+        return totalMethodLineCounter;
+    }
+
+    public int getMaxParameterCounter() {
+        return maxParameterCounter;
+    }
+
+    public int getTotalLineCounter() {
+        return totalLineCounter;
+    }
+
+    public int getTotalPackageCounter() {
+        return totalPackageCounter;
+    }
+
+    public HashMap<String, Integer> getClassMethodCountMap() {
+        return classMethodCountMap;
+    }
+
+    public HashMap<String, Integer> getClassAttributeCountMap() {
+        return classAttributeCountMap;
+    }
+
+    public HashMap<String, HashMap<String, Integer>> getLinePerMethodPerClass() {
+        return linePerMethodPerClass;
     }
 }
