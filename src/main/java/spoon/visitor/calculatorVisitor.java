@@ -6,7 +6,7 @@ import spoon.reflect.visitor.CtScanner;
 import java.lang.annotation.Annotation;
 import java.util.HashMap;
 
-public class testVisitor extends CtScanner {
+public class calculatorVisitor extends CtScanner {
 
     private int totalClassesCounter = 0;
     private int totalFieldsCounter = 0;
