@@ -17,25 +17,19 @@ public class testVisitor extends CtScanner {
     static int totalPackageCounter = 0;
     static HashMap<String, Integer> classMethodCountMap = new HashMap<>();
     static HashMap<String, Integer> classAttributeCountMap = new HashMap<>();
-    static HashMap<String,HashMap<String,Integer>> classMethodAttributeCountMap = new HashMap<>();
-
+    static HashMap<String, HashMap<String, Integer>> linePerMethodPerClass = new HashMap<>();
 
     @Override
     public <T> void visitCtClass(CtClass<T> ctClass) {
         super.visitCtClass(ctClass);
         totalClassesCounter++;
-        classMethodCountMap.put(ctClass.getSimpleName(), ctClass.getMethods().size());
         if (ctClass.getPosition().isValidPosition()) {
             int start = ctClass.getPosition().getLine();
             int end = ctClass.getPosition().getEndLine();
             totalLineCounter += (end - start + 1);
         }
         classAttributeCountMap.put(ctClass.getSimpleName(), ctClass.getFields().size());
-        HashMap<String,Integer> methodAttributeMap = new HashMap<>();
-        ctClass.getMethods().forEach(method -> {
-            methodAttributeMap.put(method.getSimpleName(), method.getParameters().size());
-        });
-        classMethodAttributeCountMap.put(ctClass.getSimpleName(), methodAttributeMap);
+        classMethodCountMap.put(ctClass.getSimpleName(), ctClass.getMethods().size());
     }
 
     @Override
@@ -68,8 +62,6 @@ public class testVisitor extends CtScanner {
         }
     }
 
-
-
     @Override
     public <T> void visitCtField(CtField<T> f) {
         super.visitCtField(f);
@@ -83,6 +75,12 @@ public class testVisitor extends CtScanner {
         totalMethodsCounter++;
         if (m.getBody() != null) {
             totalMethodLineCounter += m.getBody().getStatements().size();
+            if (!linePerMethodPerClass.containsKey(m.getParent(CtClass.class).getSimpleName())) {
+                linePerMethodPerClass.put(m.getParent(CtClass.class).getSimpleName(), new HashMap<>());
+            }
+            linePerMethodPerClass.get(m.getParent(CtClass.class).getSimpleName()).
+                    put(m.getSimpleName(),
+                            m.getBody().getStatements().size());
         }
         if (m.getParameters().size() > maxParameterCounter) {
             maxParameterCounter = m.getParameters().size();
@@ -94,6 +92,4 @@ public class testVisitor extends CtScanner {
         super.visitCtPackage(ctPackage);
         totalPackageCounter++;
     }
-
-
 }
