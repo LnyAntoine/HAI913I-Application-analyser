@@ -18,7 +18,7 @@ import spoon.visitor.calculatorVisitor;
 
 @Controller
 public class CallGraphController {
-    @GetMapping("/graph")
+    @GetMapping("/")
     public String showForm() {
         return "graph";
     }
@@ -59,26 +59,52 @@ public class CallGraphController {
         calculator.setX(x);
         calculator.calculateAll();
         Map<String, String> calculatorResults = new HashMap<>(calculator.getMethodMessages());
+
+        // Mapping des noms de méthodes vers les textes descriptifs
+        Map<String, String> methodDescriptions = new HashMap<>();
+        methodDescriptions.put("calculateNbClass", "1. Nombre de classes de l'application");
+        methodDescriptions.put("calculateNbLine", "2. Nombre de lignes de code de l'application");
+        methodDescriptions.put("calculateNbMethod", "3. Nombre total de méthodes de l'application");
+        methodDescriptions.put("calculateNbPackage", "4. Nombre total de packages de l'application");
+        methodDescriptions.put("calculateAverageMethodPerClass", "5. Nombre moyen de méthodes par classe");
+        methodDescriptions.put("calculateAverageLinePerMethod", "6. Nombre moyen de lignes de code par méthode");
+        methodDescriptions.put("calculateAverageAttributePerClass", "7. Nombre moyen d'attributs par classe");
+        methodDescriptions.put("calculateTop10PercentNbMethodPerClass", "8. Les 10% des classes qui possèdent le plus grand nombre de méthodes");
+        methodDescriptions.put("calculateTop10PercentNbAttributePerClass", "9. Les 10% des classes qui possèdent le plus grand nombre d'attributs");
+        methodDescriptions.put("calculateTop10PercentNbAttributeMethodePerClass", "10. Les classes qui font partie en même temps des deux catégories précédentes");
+        methodDescriptions.put("moreThanXMethods", "11. Les classes qui possèdent plus de " + x + " méthodes");
+        methodDescriptions.put("calculateTop10PercentMethodPerLinPerClass", "12. Les 10% des méthodes qui possèdent le plus grand nombre de lignes de code (par classe)");
+        methodDescriptions.put("maxParameterMethod", "13. Le nombre maximal de paramètres par rapport à toutes les méthodes de l'application");
+
+        // Conversion des résultats avec les textes descriptifs
+        Map<String, String> formattedResults = new HashMap<>();
+        for (Map.Entry<String, String> entry : calculatorResults.entrySet()) {
+            String descriptiveText = methodDescriptions.get(entry.getKey());
+            if (descriptiveText != null) {
+                formattedResults.put(descriptiveText, entry.getValue());
+            }
+        }
+
         // Préparation de la réponse
         HashMap<String, Object> result = new HashMap<>();
         result.put("nodes", nodes);
         result.put("links", links);
-        result.put("calculatorResults", calculatorResults);
-        // Ajout de l'ordre des méthodes du calculator
+        result.put("calculatorResults", formattedResults);
+        // Ajout de l'ordre des méthodes avec les textes descriptifs
         List<String> calculatorOrder = List.of(
-            "calculateNbClass",
-            "calculateNbLine",
-            "calculateNbMethod",
-            "calculateNbPackage",
-            "calculateAverageMethodPerClass",
-            "calculateAverageLinePerMethod",
-            "calculateAverageAttributePerClass",
-            "calculateTop10PercentNbMethodPerClass",
-            "calculateTop10PercentNbAttributePerClass",
-            "calculateTop10PercentNbAttributeMethodePerClass",
-            "moreThanXMethods",
-            "calculateTop10PercentMethodPerLinPerClass",
-            "maxParameterMethod"
+            "1. Nombre de classes de l'application",
+            "2. Nombre de lignes de code de l'application",
+            "3. Nombre total de méthodes de l'application",
+            "4. Nombre total de packages de l'application",
+            "5. Nombre moyen de méthodes par classe",
+            "6. Nombre moyen de lignes de code par méthode",
+            "7. Nombre moyen d'attributs par classe",
+            "8. Les 10% des classes qui possèdent le plus grand nombre de méthodes",
+            "9. Les 10% des classes qui possèdent le plus grand nombre d'attributs",
+            "10. Les classes qui font partie en même temps des deux catégories précédentes",
+            "11. Les classes qui possèdent plus de " + x + " méthodes",
+            "12. Les 10% des méthodes qui possèdent le plus grand nombre de lignes de code (par classe)",
+            "13. Le nombre maximal de paramètres par rapport à toutes les méthodes de l'application"
         );
         result.put("calculatorOrder", calculatorOrder);
         return result;

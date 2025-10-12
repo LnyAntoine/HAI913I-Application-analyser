@@ -1,6 +1,5 @@
 package spoon;
 
-import spoon.processor.*;
 import spoon.reflect.CtModel;
 import spoon.visitor.calculatorVisitor;
 import spoon.visitor.callGraphVisitor;
@@ -10,30 +9,9 @@ public class spoonPart2 {
 
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
         Launcher launcher = new Launcher();
-        launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2/server2/src/main/java/");
-        //launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2/common2/src/main/java");
-        //launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\HAI913I\\Spoon\\src\\main\\java");
-        launcher.addProcessor(new nbClassProcessor());
-        launcher.addProcessor(new nbLineProcessor());
-        launcher.addProcessor(new nbMethodProcessor());
-        launcher.addProcessor(new nbPackageProcessor());
-        launcher.addProcessor(new averageMethodPerClassProcessor());
-        launcher.addProcessor(new averageLinePerMethodProcessor());
-        launcher.addProcessor(new averageAttributePerClassProcessor());
-        launcher.addProcessor(new percentClassMethodProcessor());
-        launcher.addProcessor(new percentClassAttributeProcessor());
-        launcher.addProcessor(new percentClassMethodAttributeProcessor());
-        launcher.addProcessor(new percentMethodLinePerClassProcessor());
-        launcher.addProcessor(new maxParametersProcessor());
-        moreThanXMethodProcessor processor = new moreThanXMethodProcessor();
-        processor.setParam(3);
-        launcher.addProcessor(processor);
-
-        launcher.run();
-
-
-        /*
-        CtModel model = launcher.getModel();
+        launcher.addInputResource(System.getProperty("user.dir"));
+        launcher.getEnvironment().setNoClasspath(true);
+        CtModel model = launcher.buildModel();
         callGraphVisitor callGraphVisitor = new callGraphVisitor();
         calculatorVisitor calculatorVisitor = new calculatorVisitor();
         model.getAllTypes().forEach(type->{
@@ -45,8 +23,6 @@ public class spoonPart2 {
         calculator.setX(3);
         calculator.calculateAll();
         System.out.println(callGraphVisitor.getHashMapToString());
-
-        */
     }
-    }
+}
 
