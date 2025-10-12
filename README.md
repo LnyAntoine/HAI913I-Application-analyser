@@ -1,7 +1,5 @@
 # SpoonHAI913I - Analyseur de Code Java avec Spoon
 
-## 🚀 Lancement rapide
-
 ### 1. Compilation
 ```cmd
 mvn clean compile
