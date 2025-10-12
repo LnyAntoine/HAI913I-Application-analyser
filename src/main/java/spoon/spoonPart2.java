@@ -13,7 +13,7 @@ public class spoonPart2 {
         launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2/server2/src/main/java/");
         //launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2/common2/src/main/java");
         //launcher.addInputResource("C:\\Users\\launa\\IdeaProjects\\HAI913I\\Spoon\\src\\main\\java");
-        /*launcher.addProcessor(new nbClassProcessor());
+        launcher.addProcessor(new nbClassProcessor());
         launcher.addProcessor(new nbLineProcessor());
         launcher.addProcessor(new nbMethodProcessor());
         launcher.addProcessor(new nbPackageProcessor());
@@ -28,8 +28,11 @@ public class spoonPart2 {
         moreThanXMethodProcessor processor = new moreThanXMethodProcessor();
         processor.setParam(3);
         launcher.addProcessor(processor);
-         */
+
         launcher.run();
+
+
+        /*
         CtModel model = launcher.getModel();
         callGraphVisitor callGraphVisitor = new callGraphVisitor();
         calculatorVisitor calculatorVisitor = new calculatorVisitor();
@@ -42,6 +45,8 @@ public class spoonPart2 {
         calculator.setX(3);
         calculator.calculateAll();
         System.out.println(callGraphVisitor.getHashMapToString());
+
+        */
+    }
     }
 
-}

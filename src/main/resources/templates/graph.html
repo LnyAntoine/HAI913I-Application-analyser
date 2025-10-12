@@ -3,104 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <title>Call Graph</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
+    <style>
+        #calculatorResults ul { list-style: none; padding: 0; }
+        #calculatorResults li { margin-bottom: 0.7em; }
+        #graph { margin-top: 2em; text-align: center; }
+        #zoomControls { text-align: center; margin: 1em 0; }
+        #zoomControls button { cursor: pointer; }
+    </style>
 </head>
 <body>
     <h1>Générateur de graphe d'appels</h1>
     <form id="dirForm">
         <label for="directory">Chemin du dossier :</label>
         <input type="text" id="directory" name="directory" required>
+        <label for="x">Valeur de X :</label>
+        <input type="number" id="x" name="x" value="0" min="0" required>
         <button type="submit">Générer le graphe</button>
     </form>
-    <div id="graph"></div>
+    <div id="calculatorResults"></div>
+    <div id="zoomcontrol">
+        <div id="idc"></div>
+    </div>
+    <div id="graphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
+        <div id="graph"></div>
+    </div>
     <script>
         document.getElementById('dirForm').onsubmit = async function(e) {
             e.preventDefault();
             const dir = document.getElementById('directory').value;
+            const x = document.getElementById('x').value;
             const response = await fetch('/getGraph', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'directory=' + encodeURIComponent(dir)
+                body: 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x)
             });
             const data = await response.json();
-            drawGraph(data);
+            showCalculatorResults(data.calculatorResults, data.calculatorOrder);
+            drawGraphViz(data);
         };
-        function drawGraph(data) {
+        function showCalculatorResults(results, order) {
+            const div = document.getElementById('calculatorResults');
+            if (!results) {
+                div.innerHTML = '';
+                return;
+            }
+            let html = '<h2>Résultats Calculator</h2><ul>';
+            for (const key of order) {
+                if (results[key]) {
+                    html += `<li><b>${key}</b> : <pre style="display:inline">${results[key]}</pre></li>`;
+                }
+            }
+            html += '</ul>';
+            div.innerHTML = html;
+        }
+        function drawGraphViz(data) {
             document.getElementById('graph').innerHTML = '';
-            const width = 900, height = 700;
-            const svg = d3.select('#graph').append('svg')
-                .attr('width', width)
-                .attr('height', height)
-                .call(d3.zoom().on('zoom', function (event) {
-                    svg.attr('transform', event.transform);
-                }))
-                .append('g');
-            // Ajout du marqueur de flèche
-            svg.append('defs').append('marker')
-                .attr('id', 'arrow')
-                .attr('viewBox', '0 -5 10 10')
-                .attr('refX', 22)
-                .attr('refY', 0)
-                .attr('markerWidth', 6)
-                .attr('markerHeight', 6)
-                .attr('orient', 'auto')
-                .append('path')
-                .attr('d', 'M0,-5L10,0L0,5')
-                .attr('fill', '#888');
-            const simulation = d3.forceSimulation(data.nodes)
-                .force('link', d3.forceLink(data.links).id(d => d.id).distance(180))
-                .force('charge', d3.forceManyBody().strength(-400))
-                .force('center', d3.forceCenter(width / 2, height / 2));
-            const link = svg.append('g')
-                .attr('stroke', '#888')
-                .attr('stroke-opacity', 0.5)
-                .selectAll('line')
-                .data(data.links)
-                .enter().append('line')
-                .attr('stroke-width', 1.5)
-                .attr('marker-end', 'url(#arrow)');
-            const node = svg.append('g')
-                .selectAll('circle')
-                .data(data.nodes)
-                .enter().append('circle')
-                .attr('r', 16)
-                .attr('fill', '#fff')
-                .attr('stroke', '#69b3a2')
-                .attr('stroke-width', 3)
-                .on('mouseover', function(event, d) {
-                    d3.select(this).attr('stroke', '#ff6600').attr('stroke-width', 5);
-                    link.attr('stroke', l => l.source.id === d.id || l.target.id === d.id ? '#ff6600' : '#888')
-                        .attr('stroke-opacity', l => l.source.id === d.id || l.target.id === d.id ? 1 : 0.2);
-                })
-                .on('mouseout', function(event, d) {
-                    d3.select(this).attr('stroke', '#69b3a2').attr('stroke-width', 3);
-                    link.attr('stroke', '#888').attr('stroke-opacity', 0.5);
-                });
-            // Ajout du nom des nœuds
-            const labels = svg.append('g')
-                .selectAll('text')
-                .data(data.nodes)
-                .enter().append('text')
-                .text(d => d.id)
-                .attr('font-size', '14px')
-                .attr('font-weight', 'bold')
-                .attr('fill', '#222')
-                .attr('dx', 20)
-                .attr('dy', 5);
-            node.append('title').text(d => d.id);
-            simulation.on('tick', () => {
-                link
-                    .attr('x1', d => d.source.x)
-                    .attr('y1', d => d.source.y)
-                    .attr('x2', d => d.target.x)
-                    .attr('y2', d => d.target.y);
-                node
-                    .attr('cx', d => d.x)
-                    .attr('cy', d => d.y);
-                labels
-                    .attr('x', d => d.x)
-                    .attr('y', d => d.y);
-            });
+            // Construction du graphe DOT vertical avec formes de base (cercles blancs par défaut)
+            let dot = 'digraph G {\nrankdir=TB; ranksep=1.2; nodesep=1.0;';
+            dot += '\nnode [shape=circle, style=filled, fillcolor=white, color=black, fontcolor=black, fontname="Arial", fontsize=12];';
+            dot += '\nedge [color="#888", arrowsize=0.8, penwidth=1.5];';
+            for (const node of data.nodes) {
+                dot += `\n"${node.id}" [label="${node.id}"]`;
+            }
+            for (const link of data.links) {
+                dot += `\n"${link.source}" -> "${link.target}"`;
+            }
+            dot += '\n}';
+            // Affichage avec Viz.js et ajout d'un zoom dynamique
+            try {
+                const viz = new Viz();
+                viz.renderSVGElement(dot)
+                    .then(function(element) {
+                        element.style.maxWidth = '100%';
+                        element.style.height = 'auto';
+                        element.style.width = '100%';
+                        element.style.display = 'block';
+                        element.style.margin = '0';
+                        element.style.padding = '0';
+                        element.id = 'graphSvg';
+                        document.getElementById('graph').appendChild(element);
+                        addZoomControls();
+                    })
+                    .catch(function(error) {
+                        document.getElementById('graph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                    });
+            } catch (e) {
+                document.getElementById('graph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+            }
+        }
+        // Ajout des contrôles de zoom dynamiques
+        function addZoomControls() {
+            let controls = document.getElementById('zoomControls');
+            if (!controls) {
+                controls = document.createElement('div');
+                controls.id = 'zoomControls';
+                controls.style.textAlign = 'center';
+                controls.style.margin = '1em 0';
+                controls.innerHTML = `
+                    <button type="button" id="zoomOut">-</button>
+                    <input type="range" id="zoomSlider" min="0.1" max="8" step="0.01" value="0.6" style="width:180px;vertical-align:middle;">
+                    <button type="button" id="zoomIn">+</button>
+                `;
+                document.getElementById('zoomcontrol').insertBefore(controls, document.getElementById('idc'));
+            }
+            const svg = document.getElementById('graphSvg');
+            const slider = document.getElementById('zoomSlider');
+            const zoomIn = document.getElementById('zoomIn');
+            const zoomOut = document.getElementById('zoomOut');
+            function setZoom(val) {
+                svg.style.transform = `scale(${val})`;
+                svg.style.transformOrigin = 'top left';
+            }
+            slider.oninput = function() { setZoom(this.value); };
+            zoomIn.onclick = function() {
+                let v = Math.min(4, parseFloat(slider.value) + 0.1);
+                slider.value = v;
+                setZoom(v);
+            };
+            zoomOut.onclick = function() {
+                let v = Math.max(0.2, parseFloat(slider.value) - 0.1);
+                slider.value = v;
+                setZoom(v);
+            };
+            // Valeur initiale
+            setZoom(slider.value);
         }
     </script>
 </body>

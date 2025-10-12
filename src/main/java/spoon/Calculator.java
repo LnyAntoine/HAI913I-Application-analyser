@@ -7,7 +7,13 @@ import java.util.stream.Collectors;
 
 public class Calculator {
     private final calculatorVisitor visitor;
+
+    public Map<String, String> getMethodMessages() {
+        return methodMessages;
+    }
+
     private final Map<String, String> methodMessages = new HashMap<>();
+
 
     public void setX(int x) {
         this.x = x;
