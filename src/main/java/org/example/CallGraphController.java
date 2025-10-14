@@ -23,13 +23,9 @@ public class CallGraphController {
         return "graph";
     }
 
-    @PostMapping("/getGraph")
-    @ResponseBody
-    public Map<String, Object> getGraph(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x) {
-        Launcher launcher = new Launcher();
-        launcher.addInputResource(directory);
-        launcher.getEnvironment().setNoClasspath(true);
-        CtModel model = launcher.buildModel();
+
+    // Nouvelle méthode pour générer le graphe
+    private Map<String, Object> generateGraph(CtModel model) {
         callGraphVisitor visitor = new callGraphVisitor();
         model.getAllTypes().forEach(type -> type.accept(visitor));
         // Génération du graphe d'appels
@@ -52,6 +48,23 @@ public class CallGraphController {
             n.put("id", node);
             nodes.add(n);
         }
+        Map<String, Object> graphData = new HashMap<>();
+        graphData.put("nodes", nodes);
+        graphData.put("links", links);
+        return graphData;
+    }
+
+    @PostMapping("/getGraph")
+    @ResponseBody
+    public Map<String, Object> getGraph(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x) {
+        Launcher launcher = new Launcher();
+        launcher.addInputResource(directory);
+        launcher.getEnvironment().setNoClasspath(true);
+        CtModel model = launcher.buildModel();
+        // Utilisation de la nouvelle méthode pour générer le graphe
+        Map<String, Object> graphData = generateGraph(model);
+        ArrayList<Map<String, String>> nodes = (ArrayList<Map<String, String>>) graphData.get("nodes");
+        ArrayList<Map<String, String>> links = (ArrayList<Map<String, String>>) graphData.get("links");
         // Exécution de Calculator
         calculatorVisitor calcVisitor = new calculatorVisitor(); // ou adapter selon le constructeur
         model.getAllTypes().forEach(type -> type.accept(calcVisitor));
