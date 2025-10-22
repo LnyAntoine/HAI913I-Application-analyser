@@ -1,27 +1,17 @@
 package spoonTest;
 
-import com.example.services.ClusteringClasses.Classes;
-import com.example.services.ClusteringClasses.Cluster;
-import com.example.services.ClusteringClasses.Clusterable;
 import com.example.services.ClusteringServices;
-import com.example.services.CouplingServices;
-import com.example.services.StatisticCalculatorServices;
 import com.example.services.visitor.ClusteringVisitor;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
-import com.example.services.visitor.StatisticsVisitor;
-import com.example.services.visitor.CallingVisitor;
-import com.example.services.visitor.CouplingVisitor;
 
-import java.util.ArrayList;
-
-public class spoonPart2 {
+public class spoonTest {
     public static void main(String[] args) {
 
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
         Launcher launcher = new Launcher();
         String dir = System.getProperty("user.dir") ;
-        dir = "C:\\Users\\launa\\IdeaProjects\\Spoon-TP2-HAI913I";
+        dir = "C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo1\\server1";
         launcher.addInputResource(dir);
 
         launcher.getEnvironment().setNoClasspath(true);
@@ -34,7 +24,8 @@ public class spoonPart2 {
         clusteringServices.clusteringHierarchique();
         System.out.println(clusteringServices.getDendrogramDot());
 
-        /*
+
+/*
         Clusterable classe1Test = new Classes("test1");
         Clusterable classe2Test = new Classes("test2");
         Clusterable cluster1Test = new Cluster(classe1Test,classe2Test,1);
@@ -43,7 +34,9 @@ public class spoonPart2 {
         ArrayList<Clusterable> clusters = new ArrayList<>();
         clusters.add(cluster1Test);
         System.out.println("contains : "+clusters.contains(cluster2Test));
-        */
+
+
+ */
     }
 }
 

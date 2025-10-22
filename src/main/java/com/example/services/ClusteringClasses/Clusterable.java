@@ -12,15 +12,12 @@ public abstract class Clusterable {
     public float getCouplingWith(Clusterable c,
                                  HashMap<String,HashMap<String,Float>> classCouplingNote,
                                  List<String> classList) {
-        //System.out.println("GetCouplingWith");
         float totalCouplingValue = 0.0f;
         float couplingValue = 0.0f;
 
         //On récupère TOUS les clusterables de notre this et de c
         List<Clusterable> fromClusterables = getClusterables();
         List<Clusterable> toClusterables = c.getClusterables();
-        //System.out.println("From clusterables : "+fromClusterables);
-        //System.out.println("To clusterables : "+toClusterables);
 
         //Pour toutes les clusterabless contenu dans le cluster this
         for (Clusterable fromClusterable : fromClusterables) {
@@ -30,15 +27,8 @@ public abstract class Clusterable {
                 if (classCouplingNote.containsKey(fromClusterable.getName())) {
                     if (classCouplingNote.get(fromClusterable.getName())
                             .containsKey(toClusterable.getName())) {
-                        //System.out.println("Couplage : "+fromClusterable +" | "+ toClusterable);
-                        /*System.out.println("CouplageValue : "+totalCouplingValue + " | " + classCouplingNote.get(fromClusterable.getName())
-                                .get(toClusterable.getName()));
-
-                         */
                         totalCouplingValue += classCouplingNote.get(fromClusterable.getName())
                                 .get(toClusterable.getName());
-                        //System.out.println(totalCouplingValue);
-
                     }
                 }
                 else {
@@ -52,9 +42,13 @@ public abstract class Clusterable {
                 }
             }
         }
+        /*
         couplingValue = !classList.isEmpty()
                 ? totalCouplingValue/classList.size()
                 : couplingValue;
+
+         */
+        couplingValue = totalCouplingValue;
         //System.out.println(totalCouplingValue);
         return couplingValue;
     }

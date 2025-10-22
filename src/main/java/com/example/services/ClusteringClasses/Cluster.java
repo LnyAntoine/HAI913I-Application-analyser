@@ -1,16 +1,19 @@
 package com.example.services.ClusteringClasses;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Cluster extends Clusterable {
-    private final Clusterable clusterable1;
-    private final Clusterable clusterable2;
+    private final ArrayList<Clusterable> clusterables;
     private float clusterValue;
 
     public Cluster(Clusterable clusterable1, Clusterable clusterable2,float clusterValue) {
-        this.clusterable1 = clusterable1;
-        this.clusterable2 = clusterable2;
+        this.clusterables = new ArrayList<>(Arrays.asList(clusterable1, clusterable2));
+        this.clusterValue = clusterValue;
+    }
+    public Cluster(List<Clusterable> clusterables, float clusterValue) {
+        this.clusterables = new ArrayList<>(clusterables);
         this.clusterValue = clusterValue;
     }
 
@@ -21,15 +24,20 @@ public class Cluster extends Clusterable {
 
     @Override
     public String getName() {
-        return clusterable1.getName() + "-" + clusterable2.getName();
+        StringBuilder s = new StringBuilder();
+        for (Clusterable c : clusterables) {
+            s.append(c.getName()).append("-");
+        }
+        return s.substring(0, s.length() - 1);
     }
 
     @Override
     public List<Clusterable> getClusterables() {
         ArrayList<Clusterable> clusterableList = new ArrayList<>();
         clusterableList.add(this);
-        clusterableList.addAll(clusterable1.getClusterables());
-        clusterableList.addAll(clusterable2.getClusterables());
+        for (Clusterable c : clusterables) {
+            clusterableList.addAll(c.getClusterables());
+        }
         return clusterableList;
     }
 
@@ -41,9 +49,13 @@ public class Cluster extends Clusterable {
 
     @Override
     public String toString(){
-        String text = "";
-        text += "[ ["+ clusterable1+"] | ["+clusterable2+"] ]";
-        return text;
+        StringBuilder text = new StringBuilder("[ ");
+        for (Clusterable c : clusterables) {
+            text.append(" [").append(c.toString()).append("] |");
+        }
+        String s = text.substring(0, text.length() - 1);
+        s+=" ]";
+        return s;
     }
 }
 

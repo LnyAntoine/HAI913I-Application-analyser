@@ -2,23 +2,29 @@ package com.example.services.visitor;
 
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
+import spoon.reflect.declaration.CtField;
+import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.visitor.CtScanner;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class ClusteringVisitor extends CtScanner {
     private HashMap<String, //Classe mere
-            HashMap<String, //Type de relation invoc, attribut, heritage ?
                     HashMap<String, //Classe fille
                             HashMap<String,//Nom de la méthode
-                                    HashMap<String, //Option de la methode
+                                    HashMap<String, //type de la valeur
                                             Integer //Valeur
-                                            >>>>> clusteringMap;
-
-
-
+                                            >>>> clusteringInvocationMap;
+    private HashMap<String,//Classe mere (contenant l'attribut)
+            HashMap<String,//classe fille (type de l'attribut)
+                            Integer>> clusteringFieldMap;
+    private HashMap<String, //Classe mere
+            HashMap<String, //Classe fille (type du paramètre)
+                    Integer>> clusteringParamsMap;
     private ArrayList<String> classesList;
     public <T> void visitCtInvocation(CtInvocation<T> ctInvocation) {
         super.visitCtInvocation(ctInvocation);
@@ -37,19 +43,16 @@ public class ClusteringVisitor extends CtScanner {
         if (parentClass == null || targetClass == null || targetMethodName == null) {
             return;
         }
-        if(clusteringMap==null){
-            clusteringMap = new HashMap<>();
+        if(clusteringInvocationMap ==null){
+            clusteringInvocationMap = new HashMap<>();
         }
-        if(!clusteringMap.containsKey(parentClass)) {
-            clusteringMap.put(parentClass, new HashMap<>());
+        if(!clusteringInvocationMap.containsKey(parentClass)) {
+            clusteringInvocationMap.put(parentClass, new HashMap<>());
         }
-        if(!clusteringMap.get(parentClass).containsKey("invocation")) {
-            clusteringMap.get(parentClass).put("invocation", new HashMap<>());
+        if(!clusteringInvocationMap.get(parentClass).containsKey(targetClass)) {
+            clusteringInvocationMap.get(parentClass).put(targetClass, new HashMap<>());
         }
-        if(!clusteringMap.get(parentClass).get("invocation").containsKey(targetClass)) {
-            clusteringMap.get(parentClass).get("invocation").put(targetClass, new HashMap<>());
-        }
-        HashMap<String, HashMap<String, Integer>> methodMap = clusteringMap.get(parentClass).get("invocation").get(targetClass);
+        HashMap<String, HashMap<String, Integer>> methodMap = clusteringInvocationMap.get(parentClass).get(targetClass);
         if (!methodMap.containsKey(targetMethodName)) {
             HashMap<String,Integer> tempMap = new HashMap<>();
             tempMap.put("call", 1);
@@ -61,7 +64,47 @@ public class ClusteringVisitor extends CtScanner {
             tempMap.put("call", tempMap.get("call") + 1);
             methodMap.put(targetMethodName, tempMap);
         }
+        clusteringInvocationMap.get(parentClass).put(targetClass, methodMap);
+    }
 
+    public <T> void visitCtMethod(CtMethod<T> ctMethod) {
+        super.visitCtMethod(ctMethod);
+        if (clusteringParamsMap == null) {
+            clusteringParamsMap = new HashMap<>();
+        }
+        List<CtParameter<?>> paramsList = ctMethod.getParameters();
+        if (paramsList == null || paramsList.isEmpty()) {
+            return;
+        }
+        String parentClass = ctMethod.getParent(CtClass.class)!=null?ctMethod.getParent(CtClass.class).getQualifiedName():null;
+        if (parentClass == null) {
+            return;
+        }
+        if (!clusteringParamsMap.containsKey(parentClass)) {
+            clusteringParamsMap.put(parentClass, new HashMap<>());
+        }
+        HashMap<String, Integer> paramsMap = clusteringParamsMap.get(parentClass);
+        for (CtParameter<?> param : paramsList) {
+            String paramType = param.getType() != null ? param.getType().getQualifiedName() : "unknown";
+            paramsMap.put(paramType, paramsMap.getOrDefault(paramType, 0) + 1);
+        }
+        clusteringParamsMap.put(parentClass, paramsMap);
+    }
+
+    public <T> void visitCtField(CtField<T> ctField) {
+        super.visitCtField(ctField);
+
+        if (clusteringFieldMap == null) {
+            clusteringFieldMap = new HashMap<>();
+        }
+        String parentClass = ctField.getParent(CtClass.class).getQualifiedName();
+        String fieldType = ctField.getType() != null ? ctField.getType().getQualifiedName() : "unknown";
+        if (!clusteringFieldMap.containsKey(parentClass)) {
+            clusteringFieldMap.put(parentClass, new HashMap<>());
+        }
+        HashMap<String, Integer> fieldMap = clusteringFieldMap.get(parentClass);
+        fieldMap.put(fieldType, fieldMap.getOrDefault(fieldType, 0) + 1);
+        clusteringFieldMap.put(parentClass, fieldMap);
     }
 
     public <T> void visitCtClass(CtClass<T> ctClass) {
@@ -74,7 +117,18 @@ public class ClusteringVisitor extends CtScanner {
     public ArrayList<String> getClassesList() {
         return classesList;
     }
-    public HashMap<String, HashMap<String, HashMap<String, HashMap<String, HashMap<String, Integer>>>>> getClusteringMap() {
-        return clusteringMap;
+    public HashMap<String, HashMap<String, HashMap<String, HashMap<String, Integer>>>> getClusteringInvocationMap() {
+        return clusteringInvocationMap;
+    }
+    public HashMap<String, //Classe mere
+            HashMap<String, //Classe fille (type du paramètre)
+                    Integer>> getClusteringParamsMap() {
+        return clusteringParamsMap;
+    }
+
+    public HashMap<String,//Classe mere (contenant l'attribut)
+            HashMap<String,//classe fille (type de l'attribut)
+                    Integer>> getClusteringFieldMap() {
+        return clusteringFieldMap;
     }
 }
