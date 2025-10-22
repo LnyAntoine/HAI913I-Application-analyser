@@ -1,4 +1,4 @@
-package spoon.visitor;
+package com.example.services.visitor;
 
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtMethod;
@@ -6,8 +6,8 @@ import spoon.reflect.visitor.CtScanner;
 
 import java.util.*;
 
-public class callGraphVisitor extends CtScanner {
-    private HashMap<String, ArrayList<String>> invocations = new HashMap<>();
+public class CallingVisitor extends CtScanner {
+    private final HashMap<String, ArrayList<String>> invocations = new HashMap<>();
 
     @Override
     public <T> void visitCtInvocation(CtInvocation<T> invocation) {

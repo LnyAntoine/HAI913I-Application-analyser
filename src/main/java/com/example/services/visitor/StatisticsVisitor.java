@@ -1,4 +1,4 @@
-package spoon.visitor;
+package com.example.services.visitor;
 
 import spoon.reflect.declaration.*;
 import spoon.reflect.visitor.CtScanner;
@@ -6,7 +6,7 @@ import spoon.reflect.visitor.CtScanner;
 import java.lang.annotation.Annotation;
 import java.util.HashMap;
 
-public class calculatorVisitor extends CtScanner {
+public class StatisticsVisitor extends CtScanner {
 
     private int totalClassesCounter = 0;
     private int totalFieldsCounter = 0;

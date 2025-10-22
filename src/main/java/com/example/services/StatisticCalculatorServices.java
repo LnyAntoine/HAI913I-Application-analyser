@@ -1,12 +1,12 @@
-package spoon;
+package com.example.services;
 
-import spoon.visitor.calculatorVisitor;
+import com.example.services.visitor.StatisticsVisitor;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Calculator {
-    private final calculatorVisitor visitor;
+public class StatisticCalculatorServices {
+    private final StatisticsVisitor visitor;
 
     public Map<String, String> getMethodMessages() {
         return methodMessages;
@@ -20,7 +20,7 @@ public class Calculator {
     }
 
     private int x = 0;
-    public Calculator(calculatorVisitor visitor) {
+    public StatisticCalculatorServices(StatisticsVisitor visitor) {
         this.visitor = visitor;
     }
     public void calculateAll() {
@@ -38,6 +38,11 @@ public class Calculator {
         calculateTop10PercentMethodPerLinPerClass();
         maxParameterMethod();
     }
+
+    public void calculateFilter(ArrayList<String> array) {
+        calculateAll();
+    }
+
     public void calculateNbClass(){
         String msg = "Nombre de classes : " + visitor.getTotalClassesCounter();
         System.out.println(msg);

@@ -29,6 +29,13 @@
     <div id="graphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
         <div id="graph"></div>
     </div>
+    <div id="couplingGraphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
+        <div id="couplingGraph"></div>
+    </div>
+
+    <div id="clusteringGraphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
+        <div id="clusteringGraph"></div>
+    </div>
     <script>
         document.getElementById('dirForm').onsubmit = async function(e) {
             e.preventDefault();
@@ -40,8 +47,10 @@
                 body: 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x)
             });
             const data = await response.json();
-            showCalculatorResults(data.calculatorResults, data.calculatorOrder);
-            drawGraphViz(data);
+            showCalculatorResults(data.statisticData.result, data.statisticData.order);
+            drawCallingGraph(data.callGraphData);
+            drawCouplingGraphViz(data.couplingGraphData);
+            drawClusteringGraphViz(data.clusterGraphData);
         };
         function showCalculatorResults(results, order) {
             const div = document.getElementById('calculatorResults');
@@ -58,20 +67,54 @@
             html += '</ul>';
             div.innerHTML = html;
         }
-        function drawGraphViz(data) {
-            document.getElementById('graph').innerHTML = '';
-            // Construction du graphe DOT vertical avec formes de base (cercles blancs par défaut)
-            let dot = 'digraph G {\nrankdir=TB; ranksep=1.2; nodesep=1.0;';
-            dot += '\nnode [shape=circle, style=filled, fillcolor=white, color=black, fontcolor=black, fontname="Arial", fontsize=12];';
-            dot += '\nedge [color="#888", arrowsize=0.8, penwidth=1.5];';
-            for (const node of data.nodes) {
-                dot += `\n"${node.id}" [label="${node.id}"]`;
+
+        function drawClusteringGraphViz(dot){
+            try {
+                const viz = new Viz();
+                viz.renderSVGElement(dot)
+                    .then(function(element) {
+                        element.style.maxWidth = '100%';
+                        element.style.height = 'auto';
+                        element.style.width = '100%';
+                        element.style.display = 'block';
+                        element.style.margin = '0';
+                        element.style.padding = '0';
+                        element.id = 'graphSvg';
+                        document.getElementById('clusteringGraph').appendChild(element);
+                        addZoomControls();
+                    })
+                    .catch(function(error) {
+                        document.getElementById('clusteringGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                    });
+            } catch (e) {
+                document.getElementById('clusteringGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
             }
-            for (const link of data.links) {
-                dot += `\n"${link.source}" -> "${link.target}"`;
+        }
+
+        function drawCouplingGraphViz(dot){
+            try {
+                const viz = new Viz();
+                viz.renderSVGElement(dot)
+                    .then(function(element) {
+                        element.style.maxWidth = '100%';
+                        element.style.height = 'auto';
+                        element.style.width = '100%';
+                        element.style.display = 'block';
+                        element.style.margin = '0';
+                        element.style.padding = '0';
+                        element.id = 'graphSvg';
+                        document.getElementById('couplingGraph').appendChild(element);
+                        addZoomControls();
+                    })
+                    .catch(function(error) {
+                        document.getElementById('couplingGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                    });
+            } catch (e) {
+                document.getElementById('couplingGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
             }
-            dot += '\n}';
-            // Affichage avec Viz.js et ajout d'un zoom dynamique
+        }
+        //TODO refaire le meme que couplingGraphViz
+        function drawCallingGraph(dot) {
             try {
                 const viz = new Viz();
                 viz.renderSVGElement(dot)
