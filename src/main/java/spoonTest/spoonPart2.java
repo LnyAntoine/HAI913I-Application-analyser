@@ -26,15 +26,11 @@ public class spoonPart2 {
 
         launcher.getEnvironment().setNoClasspath(true);
         CtModel model = launcher.buildModel();
-        CouplingVisitor couplingGraphVisitor = new CouplingVisitor();
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
         model.getAllTypes().forEach(type->{
-            type.accept(couplingGraphVisitor);
             type.accept(clusteringVisitor);
         });
-        CouplingServices couplingServices = new CouplingServices(couplingGraphVisitor);
-        couplingServices.generateGraphFilter(new ArrayList<>());
-        ClusteringServices clusteringServices = new ClusteringServices(couplingGraphVisitor,clusteringVisitor,couplingServices);
+        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor);
         clusteringServices.clusteringHierarchique();
         System.out.println(clusteringServices.getDendrogramDot());
 

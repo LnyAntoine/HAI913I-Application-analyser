@@ -2,7 +2,7 @@ package com.example.services.visitor;
 
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.declaration.CtClass;
-import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.visitor.CtScanner;
 
 import java.util.ArrayList;
@@ -28,7 +28,8 @@ public class ClusteringVisitor extends CtScanner {
                 ? ctInvocation.getExecutable().getDeclaringType().getQualifiedName()
                 : null;
 
-        CtMethod ctMethod = (CtMethod) ctInvocation.getExecutable();
+        CtExecutableReference<?> ctMethod = ctInvocation.getExecutable();
+
         String targetMethodName = ctInvocation.getExecutable() != null
                 ? ctInvocation.getExecutable().getSimpleName()
                 : null;

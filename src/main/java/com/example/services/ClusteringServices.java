@@ -13,23 +13,18 @@ import java.util.IdentityHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClusteringServices {
-    private final CouplingVisitor couplingVisitor;
     private final ClusteringVisitor clusteringVisitor;
     private HashMap<String,HashMap<String,Float>> classCouplingNote;
     private ArrayList<String> classes;
     private Clusterable finalCluster;
-    private final CouplingServices couplingServices;
-    public ClusteringServices(CouplingVisitor couplingVisitor, ClusteringVisitor clusteringVisitor ,CouplingServices couplingServices){
-        this.couplingVisitor = couplingVisitor;
-        this.couplingServices = couplingServices;
+    public ClusteringServices(ClusteringVisitor clusteringVisitor){
         this.clusteringVisitor = clusteringVisitor;
     }
     public void clusteringHierarchique(){
-        classes = couplingVisitor.getClasses();
-        classCouplingNote = couplingServices.getClassCouplingNote();
+        this.calculateInitialCoupling();
 
         ArrayList<Clusterable> clusters = new ArrayList<>();
-        ArrayList<Clusterable> clustersTemp = new ArrayList<>();
+        ArrayList<Clusterable> clustersTemp;
 
         //On crée des Classes (Clusterable) pour chaque classe et on les stock dans une liste
         for (String className : classes) {
@@ -125,18 +120,22 @@ public class ClusteringServices {
     }
 
     public void calculateInitialCoupling(){
-        ArrayList<String> classes = clusteringVisitor.getClassesList();
+        classes = clusteringVisitor.getClassesList();
         classCouplingNote = new HashMap<>();
         for (String class1 : classes) {
             HashMap<String,Float> couplingMap = new HashMap<>();
             for (String class2 : classes) {
-                if (!class1.equals(class2)) {
-                    float coupling = getCouplingBetween(new Classes(class1), new Classes(class2));
-                    couplingMap.put(class2,coupling);
+                if (!classCouplingNote.containsKey(class2)) {
+                    if (!class1.equals(class2)) {
+                        float coupling = getCouplingBetween(new Classes(class1), new Classes(class2));
+                        couplingMap.put(class2, coupling);
+                    }
                 }
             }
             classCouplingNote.put(class1,couplingMap);
         }
+        System.out.println(" classcoiplingnote : "+classCouplingNote);
+
     }
 
     public float getCouplingBetween(Clusterable c1, Clusterable c2) {
@@ -163,7 +162,7 @@ public class ClusteringServices {
                             for (String methodName : methodsMap.keySet()) {
                                 HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
                                 if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
-                                    CM += optionsMap.get("call") * optionsMap.get("params");
+                                    CM += optionsMap.get("call") * (optionsMap.get("params")+1);
                                 }
                             }
                         }
@@ -188,7 +187,7 @@ public class ClusteringServices {
                             for (String methodName : methodsMap.keySet()) {
                                 HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
                                 if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
-                                    CM += optionsMap.get("call") * optionsMap.get("params");
+                                    CM += optionsMap.get("call") * (optionsMap.get("params")+1);
                                 }
                             }
                         }
