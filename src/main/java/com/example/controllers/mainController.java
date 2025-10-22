@@ -1,6 +1,7 @@
 package com.example.controllers;
 
 import com.example.services.ClusteringServices;
+import com.example.services.visitor.ClusteringVisitor;
 import org.springframework.web.bind.annotation.*;
 import com.example.services.CallingServices;
 import com.example.services.CouplingServices;
@@ -63,10 +64,14 @@ public class mainController {
 
     public Object getClusterGraphData(CtModel model,ArrayList<String> filters){
         CouplingVisitor couplingGraphVisitor = new CouplingVisitor();
-        model.getAllTypes().forEach(type -> type.accept(couplingGraphVisitor));
+        ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
+        model.getAllTypes().forEach(type ->{
+            type.accept(couplingGraphVisitor);
+            type.accept(clusteringVisitor);
+        });
         CouplingServices couplingServices = new CouplingServices(couplingGraphVisitor);
         couplingServices.generateGraphFilter(filters);
-        ClusteringServices clusteringServices = new ClusteringServices(couplingGraphVisitor,couplingServices);
+        ClusteringServices clusteringServices = new ClusteringServices(couplingGraphVisitor,clusteringVisitor,couplingServices);
         clusteringServices.clusteringHierarchique();
         return clusteringServices.getDendrogramDot();
     }

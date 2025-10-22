@@ -3,7 +3,9 @@ package com.example.services;
 import com.example.services.ClusteringClasses.Classes;
 import com.example.services.ClusteringClasses.Cluster;
 import com.example.services.ClusteringClasses.Clusterable;
+import com.example.services.visitor.ClusteringVisitor;
 import com.example.services.visitor.CouplingVisitor;
+import jakarta.websocket.OnClose;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,17 +13,19 @@ import java.util.IdentityHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClusteringServices {
-    private final CouplingVisitor visitor;
+    private final CouplingVisitor couplingVisitor;
+    private final ClusteringVisitor clusteringVisitor;
     private HashMap<String,HashMap<String,Float>> classCouplingNote;
     private ArrayList<String> classes;
     private Clusterable finalCluster;
     private final CouplingServices couplingServices;
-    public ClusteringServices(CouplingVisitor visitor, CouplingServices couplingServices){
-        this.visitor = visitor;
+    public ClusteringServices(CouplingVisitor couplingVisitor, ClusteringVisitor clusteringVisitor ,CouplingServices couplingServices){
+        this.couplingVisitor = couplingVisitor;
         this.couplingServices = couplingServices;
+        this.clusteringVisitor = clusteringVisitor;
     }
     public void clusteringHierarchique(){
-        classes = visitor.getClasses();
+        classes = couplingVisitor.getClasses();
         classCouplingNote = couplingServices.getClassCouplingNote();
 
         ArrayList<Clusterable> clusters = new ArrayList<>();
@@ -119,6 +123,90 @@ public class ClusteringServices {
         //System.out.println("returned Cluster : "+returnedCluster);
         return returnedCluster;
     }
+
+    public void calculateInitialCoupling(){
+        ArrayList<String> classes = clusteringVisitor.getClassesList();
+        classCouplingNote = new HashMap<>();
+        for (String class1 : classes) {
+            HashMap<String,Float> couplingMap = new HashMap<>();
+            for (String class2 : classes) {
+                if (!class1.equals(class2)) {
+                    float coupling = getCouplingBetween(new Classes(class1), new Classes(class2));
+                    couplingMap.put(class2,coupling);
+                }
+            }
+            classCouplingNote.put(class1,couplingMap);
+        }
+    }
+
+    public float getCouplingBetween(Clusterable c1, Clusterable c2) {
+
+        float CM = 0;
+        float CA = 0;
+        float CP = 0;
+        HashMap<String,
+                HashMap<String,
+                        HashMap<String,
+                                HashMap<String,
+                                        HashMap<String,
+                                                Integer>>>>> clusteringMap = clusteringVisitor.getClusteringMap();
+
+        for (Clusterable bbC1 : c1.getClusterables()){
+            if (clusteringMap.containsKey(bbC1.getName())) {
+                HashMap<String, HashMap<String, HashMap<String, HashMap<String, Integer>>>> relationsMap = clusteringMap.get(bbC1.getName());
+                for (Clusterable bbC2 : c2.getClusterables()) {
+
+                    if (relationsMap.containsKey("invocation")) { //On calcule CM
+                        HashMap<String, HashMap<String, HashMap<String, Integer>>> toClassesMap = relationsMap.get("invocation");
+                        if (toClassesMap.containsKey(bbC2.getName())) {
+                            HashMap<String, HashMap<String, Integer>> methodsMap = toClassesMap.get(bbC2.getName());
+                            for (String methodName : methodsMap.keySet()) {
+                                HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
+                                if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
+                                    CM += optionsMap.get("call") * optionsMap.get("params");
+                                }
+                            }
+                        }
+                    }
+                    //On calcule CA
+                    if (relationsMap.containsKey("attribute")) {}
+                    //On calcule CP
+                    if (relationsMap.containsKey("params")) {}
+                }
+            }
+        }
+        for (Clusterable bbC2 : c2.getClusterables()){
+            if (clusteringMap.containsKey(bbC2.getName())) {
+                HashMap<String, HashMap<String, HashMap<String, HashMap<String, Integer>>>> relationsMap = clusteringMap.get(bbC2.getName());
+                for (Clusterable bbC1 : c1.getClusterables()) {
+
+                    //On calcule CM
+                    if (relationsMap.containsKey("invocation")) {
+                        HashMap<String, HashMap<String, HashMap<String, Integer>>> toClassesMap = relationsMap.get("invocation");
+                        if (toClassesMap.containsKey(bbC1.getName())) {
+                            HashMap<String, HashMap<String, Integer>> methodsMap = toClassesMap.get(bbC1.getName());
+                            for (String methodName : methodsMap.keySet()) {
+                                HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
+                                if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
+                                    CM += optionsMap.get("call") * optionsMap.get("params");
+                                }
+                            }
+                        }
+                    }
+                    //On calcule CA
+                    if (relationsMap.containsKey("attribute")) {}
+                    //On calcule CP
+                    if (relationsMap.containsKey("params")) {}
+                }
+            }
+        }
+
+        return (CM+CA+CP)/3;
+    }
+
+
+
+
 
     // Génère un dendrogramme DOT à partir d'un Clusterable racine.
     // N'utilise pas de modification des classes model : descend l'arbre en testant "instanceof Cluster"
