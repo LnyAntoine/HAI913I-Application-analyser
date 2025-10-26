@@ -20,7 +20,7 @@ public class spoonTest {
         model.getAllTypes().forEach(type->{
             type.accept(clusteringVisitor);
         });
-        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,0.5f);
+        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,0f);
         clusteringServices.clusteringHierarchique();
         clusteringServices.generateModules();
         System.out.println(clusteringServices.getModulesDendogramDot());

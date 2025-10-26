@@ -95,10 +95,7 @@ public class ClusteringServices {
         for (Clusterable c2 : clusters) {
             if (c1 != c2) {
                 //On récupère le coupling avec c2
-                float coupling = c1.getCouplingWith(c2,
-                        classCouplingNote,
-                        classes
-                );
+                float coupling = getCouplingBetween(c1,c2);
                 //float coupling = getCouplingBetween(c1,c2);
                 //On regarde si c'est le meilleur coupling possible
                 if (coupling > bestCoupling) {
@@ -127,7 +124,7 @@ public class ClusteringServices {
             HashMap<String,Float> couplingMap = new HashMap<>();
             for (String class2 : classes) {
                 if (!classCouplingNote.containsKey(class2)) {
-                    float coupling = getCouplingBetween(new Classes(class1), new Classes(class2));
+                    float coupling = calculateCouplingBetween(new Classes(class1), new Classes(class2));
                     couplingMap.put(class2, coupling);
                 }
             }
@@ -193,8 +190,33 @@ public class ClusteringServices {
         return (totalSonCoupling/numberOfSons)>=cp
                 && c1.getCouplingValue()>= (totalSonCoupling/numberOfSons);
     }
+
+    private float getCouplingBetween(Clusterable c1, Clusterable c2){
+        if (c1.isCluster() || c2.isCluster()){
+            return calculateCouplingBetween(c1,c2);
+        }
+        else {
+            return getCouplingBetweenHashMap(c1,c2);
+
+        }
+    }
+
+    private float getCouplingBetweenHashMap(Clusterable c1, Clusterable c2){
+        if (classCouplingNote.containsKey(c1.getName())){
+            if (classCouplingNote.get(c1.getName()).containsKey(c2.getName())){
+                return classCouplingNote.get(c1.getName()).get(c2.getName());
+            }
+        }
+        if (classCouplingNote.containsKey(c2.getName())){
+            if (classCouplingNote.get(c2.getName()).containsKey(c1.getName())){
+                return classCouplingNote.get(c2.getName()).get(c1.getName());
+            }
+        }
+        return 0f;
+    }
+
     //Calcule le couplage entre deux clusterable
-    private float getCouplingBetween(@NonNull Clusterable c1, Clusterable c2) {
+    private float calculateCouplingBetween(@NonNull Clusterable c1, Clusterable c2) {
         float CM = 0;
         float CA = 0;
         float CP = 0;
@@ -216,7 +238,7 @@ public class ClusteringServices {
                             for (String methodName : methodsMap.keySet()) {
                                 HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
                                 if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
-                                    CM += optionsMap.get("call") * (optionsMap.get("params")+1);
+                                    CM += optionsMap.get("call");// * (optionsMap.get("params")+1);
                                 }
                             }
                         }
@@ -249,7 +271,7 @@ public class ClusteringServices {
                             for (String methodName : methodsMap.keySet()) {
                                 HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
                                 if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
-                                    CM += optionsMap.get("call") * (optionsMap.get("params")+1);
+                                    CM += optionsMap.get("call");// * (optionsMap.get("params")+1);
                                 }
                             }
                         }
@@ -271,13 +293,57 @@ public class ClusteringServices {
             }
         }
         int totalCall = getTotalCall(c1) + getTotalCall(c2);
-        //if (totalCall > 0){CM = CM/totalCall;}
+        if (totalCall > 0){CM = CM/totalCall;}
         if (c1.getName().toLowerCase().contains("clustering")) {
             System.out.println(c1.getName() +" | "+ c2.getName());
             System.out.println(CM+" | "+CA+" | "+CP);
             System.out.println((CM+CA+CP)/3);
         }
-        return (CM)/3;
+        return (CM+CA+CP)/3;
+    }
+
+    private int getTotalFields(Clusterable c1){
+        int totalFields = 0;
+        HashMap<String,
+                HashMap<String,
+                                        Integer>> clusteringFieldMap = clusteringVisitor.getClusteringFieldMap();
+
+        for (Clusterable bbC1 : c1.getClusterables()){
+            if (bbC1.isCluster()){
+                //On ignore les clusters qui sont mis dans la liste
+                // des clusterable (leur classe est déjà présente)
+                continue;
+            }
+            if (clusteringFieldMap.containsKey(bbC1.getName())) {
+                HashMap<String, Integer> relationsMap = clusteringFieldMap.get(bbC1.getName());
+                for (Integer nbFields : relationsMap.values()) {
+                            totalFields += nbFields;
+                }
+            }
+        }
+        return totalFields;
+    }
+
+    private int getTotalParameters(Clusterable c1){
+        int totalParams = 0;
+        HashMap<String,
+                HashMap<String,
+                                        Integer>> clusteringParamsMap = clusteringVisitor.getClusteringParamsMap();
+
+        for (Clusterable bbC1 : c1.getClusterables()){
+            if (bbC1.isCluster()){
+                //On ignore les clusters qui sont mis dans la liste
+                // des clusterable (leur classe est déjà présente)
+                continue;
+            }
+            if (clusteringParamsMap.containsKey(bbC1.getName())) {
+                HashMap<String, Integer> relationsMap = clusteringParamsMap.get(bbC1.getName());
+                for (Integer nbParams : relationsMap.values()) {
+                            totalParams += nbParams;
+                }
+            }
+        }
+        return totalParams;
     }
 
     //Calcule le nombre total d'appels de méthodes pour un clusterable
