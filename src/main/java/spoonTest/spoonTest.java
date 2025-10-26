@@ -26,6 +26,7 @@ public class spoonTest {
                     // ton traitement ici
                 });
 
+
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
         model.getAllTypes().stream()
                 .filter(ctType -> !ctType.getSimpleName().equals("spoonTest"))
