@@ -20,6 +20,16 @@
         <input type="text" id="directory" name="directory" required>
         <label for="x">Valeur de X :</label>
         <input type="number" id="x" name="x" value="0" min="0" required>
+        <label for="analysisType">Type d'analyse :</label>
+        <select id="analysisType" name="analysisType">
+            <option value="all">Tout</option>
+            <option value="statistics">Statistiques</option>
+            <option value="coupling">Couplage</option>
+            <option value="clustering">Clustering</option>
+            <option value="calling">Appels</option>
+        </select>
+        <label for="cp">CP (pour clustering) :</label>
+        <input type="number" id="cp" name="cp" value="0.5" step="0.01" min="0" max="1">
         <button type="submit">Analyser l'application</button>
     </form>
     <div id="calculatorResults"></div>
@@ -41,16 +51,65 @@
             e.preventDefault();
             const dir = document.getElementById('directory').value;
             const x = document.getElementById('x').value;
-            const response = await fetch('/getGraph', {
+            const type = document.getElementById('analysisType').value;
+            const cp = document.getElementById('cp').value;
+
+            // Clear previous graphs
+            document.getElementById('graph').innerHTML = '';
+            document.getElementById('couplingGraph').innerHTML = '';
+            document.getElementById('clusteringGraph').innerHTML = '';
+            document.getElementById('calculatorResults').innerHTML = '';
+
+            let url = '/getGraph';
+            let body = 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x);
+
+            if (type === 'calling') {
+                url = '/analyze/calling';
+            } else if (type === 'coupling') {
+                url = '/analyze/coupling';
+                body = 'directory=' + encodeURIComponent(dir);
+            } else if (type === 'clustering') {
+                url = '/analyze/clustering';
+                body = 'directory=' + encodeURIComponent(dir) + '&cp=' + encodeURIComponent(cp);
+            } else if (type === 'statistics') {
+                url = '/analyze/statistics';
+                body = 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x);
+            }
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x)
+                body: body
             });
             const data = await response.json();
-            showCalculatorResults(data.statisticData.result, data.statisticData.order);
-            drawCallingGraph(data.callGraphData);
-            drawCouplingGraphViz(data.couplingGraphData);
-            drawClusteringGraphViz(data.clusterGraphData);
+
+            // Data peut contenir différentes clefs selon l'endpoint
+            if (data.statisticData) {
+                const stat = data.statisticData;
+                // Si endpoint combiné, stat peut être l'objet result/order
+                if (stat.result && stat.order) {
+                    showCalculatorResults(stat.result, stat.order);
+                } else if (stat.statisticData) {
+                    // cas where combined returned nested map
+                    showCalculatorResults(stat.statisticData.result, stat.statisticData.order);
+                } else {
+                    // cas endpoint /analyze/statistics
+                    showCalculatorResults(stat.result || stat, stat.order || []);
+                }
+            }
+
+            if (data.callGraphData) {
+                drawCallingGraph(data.callGraphData);
+            } else if (data.couplingGraphData) {
+                drawCouplingGraphViz(data.couplingGraphData);
+            } else if (data.clusterGraphData) {
+                drawClusteringGraphViz(data.clusterGraphData);
+            } else {
+                // pour endpoint combiné on peut avoir plusieurs
+                if (data.callGraphData) drawCallingGraph(data.callGraphData);
+                if (data.couplingGraphData) drawCouplingGraphViz(data.couplingGraphData);
+                if (data.clusterGraphData) drawClusteringGraphViz(data.clusterGraphData);
+            }
         };
         function showCalculatorResults(results, order) {
             const div = document.getElementById('calculatorResults');
@@ -155,6 +214,7 @@
             const zoomIn = document.getElementById('zoomIn');
             const zoomOut = document.getElementById('zoomOut');
             function setZoom(val) {
+                if (!svg) return;
                 svg.style.transform = `scale(${val})`;
                 svg.style.transformOrigin = 'top left';
             }

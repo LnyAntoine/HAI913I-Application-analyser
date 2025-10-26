@@ -241,6 +241,25 @@ public class StatisticCalculatorServices {
         return methodMessages.getOrDefault(methodName, "");
     }
 
+    // Renvoie l'ordre d'affichage des métriques (utilisé par le controller/UI)
+    public List<String> getOrder() {
+        return List.of(
+                "calculateNbClass",
+                "calculateNbLine",
+                "calculateNbMethod",
+                "calculateNbPackage",
+                "calculateAverageMethodPerClass",
+                "calculateAverageLinePerMethod",
+                "calculateAverageAttributePerClass",
+                "calculateTop10PercentNbMethodPerClass",
+                "calculateTop10PercentNbAttributePerClass",
+                "calculateTop10PercentNbAttributeMethodePerClass",
+                "moreThanXMethods",
+                "calculateTop10PercentMethodPerLinPerClass",
+                "maxParameterMethod"
+        );
+    }
+
     public ArrayList<String> trierParValeurCroissant(Map<String, Integer> map) {
         return map.entrySet().stream()
                 .sorted(

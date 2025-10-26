@@ -8,19 +8,24 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class ClusteringServices {
     private final ClusteringVisitor clusteringVisitor;
     private HashMap<String,HashMap<String,Float>> classCouplingNote;
     private ArrayList<String> classes;
     private Clusterable finalCluster;
+    private List<Clusterable> modules;
     private final DendrogramDotGenerator dotGenerator;
+    private final float cp;
 
-    public ClusteringServices(ClusteringVisitor clusteringVisitor){
+    public ClusteringServices(ClusteringVisitor clusteringVisitor,float cp){
         this.clusteringVisitor = clusteringVisitor;
         this.dotGenerator = new DendrogramDotGenerator();
+        this.cp = cp;
     }
 
+    //Lance le clustering hiérarchique
     public void clusteringHierarchique(){
         this.calculateInitialCoupling();
 
@@ -70,6 +75,7 @@ public class ClusteringServices {
         finalCluster = clusters.getFirst();
     }
 
+    //Récupère l'index d'un cluster dans une liste de cluster
     private int getIndex(Clusterable cluster,ArrayList<Clusterable> clusters) {
         for (int i = 0; i < clusters.size(); i++) {
             Clusterable cl = clusters.get(i);
@@ -80,6 +86,7 @@ public class ClusteringServices {
         return -1;
     }
 
+    //Récupère le cluster avec le meilleur couplage avec c1
     private Clusterable getBestCoupling(Clusterable c1, ArrayList<Clusterable> clusters) {
         Clusterable best = null;
         float bestCoupling = -1;
@@ -92,6 +99,7 @@ public class ClusteringServices {
                         classCouplingNote,
                         classes
                 );
+                //float coupling = getCouplingBetween(c1,c2);
                 //On regarde si c'est le meilleur coupling possible
                 if (coupling > bestCoupling) {
                     bestCoupling = coupling;
@@ -111,6 +119,7 @@ public class ClusteringServices {
         return returnedCluster;
     }
 
+    //Calcule le couplage initial entre chaque classe
     private void calculateInitialCoupling(){
         classes = clusteringVisitor.getClassesList();
         classCouplingNote = new HashMap<>();
@@ -128,8 +137,64 @@ public class ClusteringServices {
 
     }
 
-    private float getCouplingBetween(@NonNull Clusterable c1, Clusterable c2) {
+    //Génère les modules à partir du cluster final
+    public void generateModules(){
+        modules = getModules(finalCluster);
+        System.out.println("modules :"+modules);
+    }
 
+    //Récupère tous les modules valides et les classes esseulés d'un clusterable
+    private List<Clusterable> getModules(Clusterable c){
+        if (!c.isCluster()) return c.getDirectClusterables();
+        if (isValidModule(c)){
+            List<Clusterable> sons = new ArrayList<>();
+            for (Clusterable cl : c.getClusterables()){
+                if (!cl.isCluster()) sons.add(cl);
+            }
+            Clusterable module = new Cluster(sons,c.getCouplingValue());
+            return List.of(module);
+        }
+        List<Clusterable> idk = new ArrayList<>();
+        for (Clusterable cl : c.getDirectClusterables()){
+            idk.addAll(getModules(cl));
+        }
+        return idk;
+    }
+
+    //Récupère toutes les classes filles d'un clusterable
+    private List<Clusterable> getAllClasses(Clusterable c){
+        List<Clusterable> classes = new ArrayList<>();
+        for (Clusterable cl : c.getClusterables()){
+            if (!cl.isCluster()){
+                classes.add(cl);
+            }
+        }
+        return classes;
+    }
+
+
+    //Un module est valide si la
+    // moyenne du couplage de ses fils est supérieur au cp
+    //Vérifie aussi que le cluster soit meilleur que ses sous-clusters
+    private boolean isValidModule(Clusterable c1){
+        List<Clusterable> clusterableList = c1.getDirectClusterables();
+        if (!c1.isCluster()){
+            return false;
+        }
+        float totalSonCoupling = 0;
+        int numberOfSons = clusterableList.size();
+        for (Clusterable son : clusterableList){
+            totalSonCoupling += (float) getInternalCall(son) /getTotalCall(c1);
+        }
+        if (numberOfSons==0){
+            return false;
+        }
+
+        return (totalSonCoupling/numberOfSons)>=cp
+                && c1.getCouplingValue()>= (totalSonCoupling/numberOfSons);
+    }
+    //Calcule le couplage entre deux clusterable
+    private float getCouplingBetween(@NonNull Clusterable c1, Clusterable c2) {
         float CM = 0;
         float CA = 0;
         float CP = 0;
@@ -188,7 +253,7 @@ public class ClusteringServices {
                                 }
                             }
                         }
-
+                        //On calcule CA
                         if (fieldMap.containsKey(bbC2.getName())) {
                             HashMap<String, Integer> fieldsOfC1 = fieldMap.get(bbC2.getName());
                             if (fieldsOfC1.containsKey(bbC1.getName())) {
@@ -202,17 +267,20 @@ public class ClusteringServices {
                                 CP += paramsOfC1.get(bbC1.getName());
                             }
                         }
-
-                    //On calcule CA
-                    //On calcule CP
                 }
             }
         }
-
-        System.out.println(CM+" | "+CA+" | "+CP);
-        return (CM+CA+CP)/3;
+        int totalCall = getTotalCall(c1) + getTotalCall(c2);
+        //if (totalCall > 0){CM = CM/totalCall;}
+        if (c1.getName().toLowerCase().contains("clustering")) {
+            System.out.println(c1.getName() +" | "+ c2.getName());
+            System.out.println(CM+" | "+CA+" | "+CP);
+            System.out.println((CM+CA+CP)/3);
+        }
+        return (CM)/3;
     }
 
+    //Calcule le nombre total d'appels de méthodes pour un clusterable
     private int getTotalCall(Clusterable c1){
         int totalCall = 0;
         HashMap<String,
@@ -240,6 +308,7 @@ public class ClusteringServices {
         return totalCall;
     }
 
+    //Calcule le nombre d'appels internes de méthodes pour un clusterable
     private int getInternalCall(Clusterable c1){
         int internalCall = 0;
         HashMap<String,
@@ -276,6 +345,10 @@ public class ClusteringServices {
         return internalCall;
     }
 
+    public String getModulesDendogramDot(){
+        return dotGenerator.generateDotFromList(modules);
+    }
+    //Génère le DOT du dendrogramme du clustering
     public String getDendrogramDot() {
         return dotGenerator.generateDot(finalCluster);
     }

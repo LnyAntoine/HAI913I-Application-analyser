@@ -67,6 +67,7 @@ public class ClusteringVisitor extends CtScanner {
         clusteringInvocationMap.get(parentClass).put(targetClass, methodMap);
     }
 
+    //TODO Probleme ici ? à vérifier ne semble pas enregistrer le comptage
     public <T> void visitCtMethod(CtMethod<T> ctMethod) {
         super.visitCtMethod(ctMethod);
         if (clusteringParamsMap == null) {

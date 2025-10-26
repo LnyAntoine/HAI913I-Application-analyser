@@ -46,6 +46,11 @@ public class Cluster extends Clusterable {
         return clusterValue;
     }
 
+    @Override
+    public List<Clusterable> getDirectClusterables() {
+        return clusterables;
+    }
+
 
     @Override
     public String toString(){

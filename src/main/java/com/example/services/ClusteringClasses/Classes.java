@@ -4,9 +4,17 @@ import java.util.List;
 
 public class Classes extends Clusterable {
     private final String name;
+    private Float internalCouplingValue;
 
+    //TODO donner une valeur de couplage interne
     public Classes(String name) {
         this.name = name;
+        this.internalCouplingValue = 0f;
+    }
+
+    public Classes(String name, Float value) {
+        this.name = name;
+        this.internalCouplingValue = value;
     }
 
     @Override
@@ -26,11 +34,21 @@ public class Classes extends Clusterable {
 
     @Override
     public float getCouplingValue() {
-        return -1;
+        return internalCouplingValue;
+    }
+
+    @Override
+    public List<Clusterable> getDirectClusterables() {
+        return List.of(this);
+    }
+
+    public void setCouplingValue(Float internalCouplingValue) {
+        this.internalCouplingValue = internalCouplingValue;
     }
 
     @Override
     public String toString(){
         return name;
     }
+
 }

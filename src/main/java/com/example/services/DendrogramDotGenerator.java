@@ -6,6 +6,7 @@ import com.example.services.ClusteringClasses.Clusterable;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
 
 public class DendrogramDotGenerator {
 
@@ -31,11 +32,45 @@ public class DendrogramDotGenerator {
         return sb.toString();
     }
 
-    private int getId(Clusterable node, IdentityHashMap<Clusterable, Integer> idMap, AtomicInteger counter) {
-        if (!idMap.containsKey(node)) {
-            idMap.put(node, counter.getAndIncrement());
+    /**
+     * Génère un DOT pour une liste de Clusterable. Chaque Clusterable est placé dans
+     * un subgraph séparé pour éviter les chevauchements visuels et bien séparer les arbres.
+     */
+    public String generateDotFromList(List<Clusterable> roots) {
+        if (roots == null || roots.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("digraph D {\n");
+        sb.append("rankdir=TB;\n");
+        sb.append("node [shape=box, fontsize=10];\n");
+
+        IdentityHashMap<Clusterable, Integer> idMap = new IdentityHashMap<>();
+        AtomicInteger counter = new AtomicInteger(0);
+        AtomicInteger subgraphCounter = new AtomicInteger(0);
+
+        for (Clusterable root : roots) {
+            if (root == null) continue;
+            int sg = subgraphCounter.getAndIncrement();
+            // subgraph pour séparer visuellement chaque racine
+            sb.append(String.format("subgraph cluster_%d {\n", sg));
+            sb.append("color=lightgrey;\n");
+            String rootLabel = safeLabel(root.getName());
+            sb.append(String.format("label=\"%s\";\n", rootLabel));
+
+            // construire récursivement les nœuds/edges pour cette racine
+            buildDotRecursive(root, sb, idMap, counter);
+
+            sb.append("}\n");
         }
-        return idMap.get(node);
+
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    private int getId(Clusterable node, IdentityHashMap<Clusterable, Integer> idMap, AtomicInteger counter) {
+        if (node == null) return -1;
+        // retourner directement la valeur créée ou existante
+        return idMap.computeIfAbsent(node, k -> counter.getAndIncrement());
     }
 
     private void buildDotRecursive(Clusterable node,
@@ -45,6 +80,7 @@ public class DendrogramDotGenerator {
         if (node == null) return;
 
         int id = getId(node, idMap, counter);
+        if (id < 0) return;
         String label = safeLabel(node.getName());
 
         if (node.isCluster()) {
@@ -60,8 +96,15 @@ public class DendrogramDotGenerator {
                     java.lang.reflect.Field field = node.getClass().getDeclaredField("clusterables");
                     field.setAccessible(true);
                     Object obj = field.get(node);
-                    if (obj instanceof ArrayList) {
-                        children = (ArrayList<Clusterable>) obj;
+                    // safer conversion: accept any List<?> and copy verified Clusterable elements
+                    if (obj instanceof List) {
+                        children = new ArrayList<>();
+                        for (Object o : (List<?>) obj) {
+                            if (o instanceof Clusterable) {
+                                children.add((Clusterable) o);
+                            }
+                        }
+                        if (children.isEmpty()) children = null; // no valid children
                     }
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     // Si réflexion échoue, on ignore
@@ -74,17 +117,23 @@ public class DendrogramDotGenerator {
                 for (Clusterable child : children) {
                     if (child != null) {
                         int childId = getId(child, idMap, counter);
-                        sb.append(String.format("n%d -> n%d;\n", id, childId));
-                        buildDotRecursive(child, sb, idMap, counter);
+                        if (childId >= 0) {
+                            sb.append(String.format("n%d -> n%d;\n", id, childId));
+                            buildDotRecursive(child, sb, idMap, counter);
+                        }
                     }
                 }
             } else {
                 // sinon, attacher le cluster aux feuilles directes (fallback)
-                for (Clusterable leaf : node.getClusterables()) {
-                    if (leaf != node) { // éviter auto-référence
-                        int leafId = getId(leaf, idMap, counter);
-                        sb.append(String.format("n%d [label=\"%s\", shape=ellipse];\n", leafId, safeLabel(leaf.getName())));
-                        sb.append(String.format("n%d -> n%d;\n", id, leafId));
+                if (node.getClusterables() != null) {
+                    for (Clusterable leaf : node.getClusterables()) {
+                        if (leaf != null && leaf != node) { // éviter auto-référence
+                            int leafId = getId(leaf, idMap, counter);
+                            if (leafId >= 0) {
+                                sb.append(String.format("n%d [label=\"%s\", shape=ellipse];\n", leafId, safeLabel(leaf.getName())));
+                                sb.append(String.format("n%d -> n%d;\n", id, leafId));
+                            }
+                        }
                     }
                 }
             }
@@ -100,4 +149,3 @@ public class DendrogramDotGenerator {
         return in.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }
-

@@ -11,7 +11,7 @@ public class spoonTest {
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
         Launcher launcher = new Launcher();
         String dir = System.getProperty("user.dir") ;
-        dir = "C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo1\\server1";
+        //dir = "C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2\\server2";
         launcher.addInputResource(dir);
 
         launcher.getEnvironment().setNoClasspath(true);
@@ -20,9 +20,12 @@ public class spoonTest {
         model.getAllTypes().forEach(type->{
             type.accept(clusteringVisitor);
         });
-        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor);
+        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,0.5f);
         clusteringServices.clusteringHierarchique();
-        System.out.println(clusteringServices.getDendrogramDot());
+        clusteringServices.generateModules();
+        System.out.println(clusteringServices.getModulesDendogramDot());
+        System.out.println("--------------------");
+        //System.out.println(clusteringServices.getDendrogramDot());
 
 
 /*
@@ -34,8 +37,6 @@ public class spoonTest {
         ArrayList<Clusterable> clusters = new ArrayList<>();
         clusters.add(cluster1Test);
         System.out.println("contains : "+clusters.contains(cluster2Test));
-
-
  */
     }
 }

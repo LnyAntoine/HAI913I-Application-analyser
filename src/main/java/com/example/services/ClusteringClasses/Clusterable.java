@@ -9,6 +9,7 @@ public abstract class Clusterable {
     public abstract String getName();
     public abstract List<Clusterable> getClusterables();
     public abstract float getCouplingValue();
+    //Méthode qui calcule le couplage entre this et un autre clusterable c
     public float getCouplingWith(Clusterable c,
                                  HashMap<String,HashMap<String,Float>> classCouplingNote,
                                  List<String> classList) {
@@ -52,6 +53,8 @@ public abstract class Clusterable {
         //System.out.println(totalCouplingValue);
         return couplingValue;
     }
+    public abstract List<Clusterable> getDirectClusterables();
+    //Redéfinition de equals et hashcode pour comparer les clusterables par leur nom
     @Override
     public boolean equals(Object obj){
         if (this == obj) return true;
