@@ -36,47 +36,56 @@ public class ClusteringServices {
             clusters.add(new Classes(className));
         }
 
-        Clusterable bestCluster = null;
-        Clusterable tempCluster;
+        Clusterable bestCluster;
 
         //Tant que l'on a plus d'un cluster
         while (clusters.size()>1) {
-                bestCluster = null;
-                //Pour chaque cluster dans la liste des clusters
-                for (Clusterable cluster : clusters) {
-                    tempCluster = getBestCoupling(cluster,clusters);
-                    if (bestCluster==null) {
-                        bestCluster = tempCluster;
-                    }
-                    else {
-                        //On regarde si son meilleur cluster possible est le meilleur de toute l'architecture
-                        if (tempCluster.getCouplingValue()>=bestCluster.getCouplingValue()) {
-                            bestCluster = tempCluster;
-                        }
-                    }
+            bestCluster = getBestCluster(clusters);
+            assert bestCluster != null;
+            //On retire les sous-clusters du meilleur cluster de la liste
+/*
+            for (Clusterable cluster : bestCluster.getClusterables()) {
+                int index = getIndex(cluster, clusters);
+                if (index >= 0) {
+                    clusters.remove(index);
                 }
-                assert bestCluster!=null;
-                //On retire les sous-clusters du meilleur cluster de la liste
+            }
 
-                for (Clusterable cluster : bestCluster.getClusterables()){
-                    int index = getIndex(cluster,clusters);
-                    if (index>=0) {
-                        clusters.remove(index);
-                    }
-                }
-                if (!clusters.contains(bestCluster)) {
-                    //On ajoute le meilleure cluster à la liste
-                    clusters.add(bestCluster);
-                }
+ */
+            clusters.removeAll(bestCluster.getClusterables());
 
+            if (!clusters.contains(bestCluster)) {
+                //On ajoute le meilleure cluster à la liste
+                clusters.add(bestCluster);
+            }
         }
-
         //On renvoie le premier cluster, le cluster racine
         finalCluster = clusters.getFirst();
     }
 
+
+    //Trouve le meilleur cluster possible à faire à partir de la liste
+    private Clusterable getBestCluster(ArrayList<Clusterable> clusters) {
+        Clusterable tempCluster;
+        Clusterable bestCluster = null;
+        //Pour chaque cluster dans la liste des clusters
+        for (Clusterable cluster : clusters) {
+            tempCluster = getBestCoupling(cluster,clusters);
+            if (bestCluster==null) {
+                bestCluster = tempCluster;
+            }
+            else {
+                //On regarde si son meilleur cluster possible est le meilleur de toute l'architecture
+                if (tempCluster.getCouplingValue()>=bestCluster.getCouplingValue()) {
+                    bestCluster = tempCluster;
+                }
+            }
+        }
+
+        return bestCluster;
+    }
     //Récupère l'index d'un cluster dans une liste de cluster
-    private int getIndex(Clusterable cluster,ArrayList<Clusterable> clusters) {
+    /*private int getIndex(Clusterable cluster,ArrayList<Clusterable> clusters) {
         for (int i = 0; i < clusters.size(); i++) {
             Clusterable cl = clusters.get(i);
             if (cluster.equals(cl)) {
@@ -85,6 +94,7 @@ public class ClusteringServices {
         }
         return -1;
     }
+     */
 
     //Récupère le cluster avec le meilleur couplage avec c1
     private Clusterable getBestCoupling(Clusterable c1, ArrayList<Clusterable> clusters) {
@@ -105,14 +115,12 @@ public class ClusteringServices {
             }
         }
 
-        //System.out.println("c1 : "+ c1 +" Best : "+best + " coupling : "+bestCoupling);
         if (best!=null && bestCoupling>=0) {
             returnedCluster = new Cluster(c1, best, bestCoupling);
         } else { // Si on a pas de meilleur cluster possible alors on considère
             // que le seul cluster restant est la classe elle même
             returnedCluster = c1;
         }
-        //System.out.println("returned Cluster : "+returnedCluster);
         return returnedCluster;
     }
 
@@ -144,31 +152,16 @@ public class ClusteringServices {
     private List<Clusterable> getModules(Clusterable c){
         if (!c.isCluster()) return c.getDirectClusterables();
         if (isValidModule(c)){
-            List<Clusterable> sons = new ArrayList<>();
-            for (Clusterable cl : c.getClusterables()){
-                if (!cl.isCluster()) sons.add(cl);
-            }
+            List<Clusterable> sons = new ArrayList<>(c.getAllClasses());
             Clusterable module = new Cluster(sons,c.getCouplingValue());
             return List.of(module);
         }
-        List<Clusterable> idk = new ArrayList<>();
+        List<Clusterable> finalList = new ArrayList<>();
         for (Clusterable cl : c.getDirectClusterables()){
-            idk.addAll(getModules(cl));
+            finalList.addAll(getModules(cl));
         }
-        return idk;
+        return finalList;
     }
-
-    //Récupère toutes les classes filles d'un clusterable
-    private List<Clusterable> getAllClasses(Clusterable c){
-        List<Clusterable> classes = new ArrayList<>();
-        for (Clusterable cl : c.getClusterables()){
-            if (!cl.isCluster()){
-                classes.add(cl);
-            }
-        }
-        return classes;
-    }
-
 
     //Un module est valide si la
     // moyenne du couplage de ses fils est supérieur au cp
@@ -186,9 +179,8 @@ public class ClusteringServices {
         if (numberOfSons==0){
             return false;
         }
-
-        return (totalSonCoupling/numberOfSons)>=cp
-                && c1.getCouplingValue()>= (totalSonCoupling/numberOfSons);
+        return (totalSonCoupling/numberOfSons) >= cp
+                && c1.getCouplingValue() >= (totalSonCoupling/numberOfSons);
     }
 
     private float getCouplingBetween(Clusterable c1, Clusterable c2){
@@ -216,10 +208,13 @@ public class ClusteringServices {
     }
 
     //Calcule le couplage entre deux clusterable
-    private float calculateCouplingBetween(@NonNull Clusterable c1, Clusterable c2) {
-        float CM = 0;
-        float CA = 0;
-        float CP = 0;
+    private float calculateCouplingBetween(@NonNull Clusterable c1, @NonNull Clusterable c2) {
+        float CM1 = 0;
+        float CM2 = 0;
+        float CA1 = 0;
+        float CA2 = 0;
+        float CP1 = 0;
+        float CP2 = 0;
         HashMap<String,
                 HashMap<String,
                                 HashMap<String,
@@ -228,17 +223,17 @@ public class ClusteringServices {
 
         HashMap<String,HashMap<String,Integer>> fieldMap=clusteringVisitor.getClusteringFieldMap();
         HashMap<String,HashMap<String,Integer>> paramsMap=clusteringVisitor.getClusteringParamsMap();
-        for (Clusterable bbC1 : c1.getClusterables()){
+        for (Clusterable bbC1 : c1.getAllClasses()){
             if (clusteringInvocationMap.containsKey(bbC1.getName())) {
                 HashMap<String, HashMap<String, HashMap<String, Integer>>> relationsMap = clusteringInvocationMap.get(bbC1.getName());
-                for (Clusterable bbC2 : c2.getClusterables()) {
+                for (Clusterable bbC2 : c2.getAllClasses()) {
                          //On calcule CM
                         if (relationsMap.containsKey(bbC2.getName())) {
                             HashMap<String, HashMap<String, Integer>> methodsMap = relationsMap.get(bbC2.getName());
                             for (String methodName : methodsMap.keySet()) {
                                 HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
                                 if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
-                                    CM += optionsMap.get("call");// * (optionsMap.get("params")+1);
+                                    CM1 += optionsMap.get("call");// * (optionsMap.get("params")+1);
                                 }
                             }
                         }
@@ -246,32 +241,30 @@ public class ClusteringServices {
                         if (fieldMap.containsKey(bbC1.getName())) {
                             HashMap<String, Integer> fieldsOfC1 = fieldMap.get(bbC1.getName());
                             if (fieldsOfC1.containsKey(bbC2.getName())) {
-                                CA += fieldsOfC1.get(bbC2.getName());
+                                CA1 += fieldsOfC1.get(bbC2.getName());
                             }
                         }
                         //On calcule CP
                         if (paramsMap.containsKey(bbC1.getName())) {
                             HashMap<String, Integer> paramsOfC1 = paramsMap.get(bbC1.getName());
                             if (paramsOfC1.containsKey(bbC2.getName())) {
-                                CP += paramsOfC1.get(bbC2.getName());
+                                CP1 += paramsOfC1.get(bbC2.getName());
                             }
                         }
                 }
             }
         }
-        for (Clusterable bbC2 : c2.getClusterables()){
+        for (Clusterable bbC2 : c2.getAllClasses()){
             if (clusteringInvocationMap.containsKey(bbC2.getName())) {
                 HashMap<String, HashMap<String, HashMap<String, Integer>>> relationsMap = clusteringInvocationMap.get(bbC2.getName());
-                for (Clusterable bbC1 : c1.getClusterables()) {
-
+                for (Clusterable bbC1 : c1.getAllClasses()) {
                     //On calcule CM
-
                         if (relationsMap.containsKey(bbC1.getName())) {
                             HashMap<String, HashMap<String, Integer>> methodsMap = relationsMap.get(bbC1.getName());
                             for (String methodName : methodsMap.keySet()) {
                                 HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
                                 if (optionsMap.containsKey("call") && optionsMap.containsKey("params")) {
-                                    CM += optionsMap.get("call");// * (optionsMap.get("params")+1);
+                                    CM2 += optionsMap.get("call");// * (optionsMap.get("params")+1);
                                 }
                             }
                         }
@@ -279,21 +272,33 @@ public class ClusteringServices {
                         if (fieldMap.containsKey(bbC2.getName())) {
                             HashMap<String, Integer> fieldsOfC1 = fieldMap.get(bbC2.getName());
                             if (fieldsOfC1.containsKey(bbC1.getName())) {
-                                CA += fieldsOfC1.get(bbC1.getName());
+                                CA2 += fieldsOfC1.get(bbC1.getName());
                             }
                         }
                         //On calcule CP
                         if (paramsMap.containsKey(bbC2.getName())) {
                             HashMap<String, Integer> paramsOfC1 = paramsMap.get(bbC2.getName());
                             if (paramsOfC1.containsKey(bbC1.getName())) {
-                                CP += paramsOfC1.get(bbC1.getName());
+                                CP2 += paramsOfC1.get(bbC1.getName());
                             }
                         }
                 }
             }
         }
         int totalCall = getTotalCall(c1) + getTotalCall(c2);
+        int totalFields = getTotalFields(c1) + getTotalFields(c2);
+        int totalParams = getTotalParameters(c1) + getTotalParameters(c2);
+
+        int totalClasses = c1.getAllClasses().size() + c2.getAllClasses().size();
+        if (totalClasses<=0) return 0;
+
+        float CM = (CM1+CM2)/totalClasses;
+        float CP = (CP1+CP2)/totalClasses;
+        float CA = (CA1+CA2)/totalClasses;
+
         if (totalCall > 0){CM = CM/totalCall;}
+        if (totalFields > 0){CA = CA/totalFields;}
+        if (totalParams > 0){CP = CP/totalParams;}
         if (c1.getName().toLowerCase().contains("clustering")) {
             System.out.println(c1.getName() +" | "+ c2.getName());
             System.out.println(CM+" | "+CA+" | "+CP);
@@ -305,8 +310,7 @@ public class ClusteringServices {
     private int getTotalFields(Clusterable c1){
         int totalFields = 0;
         HashMap<String,
-                HashMap<String,
-                                        Integer>> clusteringFieldMap = clusteringVisitor.getClusteringFieldMap();
+                HashMap<String, Integer>> clusteringFieldMap = clusteringVisitor.getClusteringFieldMap();
 
         for (Clusterable bbC1 : c1.getClusterables()){
             if (bbC1.isCluster()){

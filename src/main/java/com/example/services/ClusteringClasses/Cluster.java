@@ -12,6 +12,7 @@ public class Cluster extends Clusterable {
         this.clusterables = new ArrayList<>(Arrays.asList(clusterable1, clusterable2));
         this.clusterValue = clusterValue;
     }
+
     public Cluster(List<Clusterable> clusterables, float clusterValue) {
         this.clusterables = new ArrayList<>(clusterables);
         this.clusterValue = clusterValue;
@@ -50,7 +51,6 @@ public class Cluster extends Clusterable {
     public List<Clusterable> getDirectClusterables() {
         return clusterables;
     }
-
 
     @Override
     public String toString(){

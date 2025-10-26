@@ -14,18 +14,30 @@ public class spoonTest {
         //dir = "C:\\Users\\launa\\IdeaProjects\\TPGRPC2\\exo2\\server2";
         launcher.addInputResource(dir);
 
+
+
         launcher.getEnvironment().setNoClasspath(true);
         CtModel model = launcher.buildModel();
+
+
+        model.getAllTypes().stream()
+                .filter(ctType -> !ctType.getSimpleName().equals("spoonTest"))
+                .forEach(ctType -> {
+                    // ton traitement ici
+                });
+
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
-        model.getAllTypes().forEach(type->{
+        model.getAllTypes().stream()
+                .filter(ctType -> !ctType.getSimpleName().equals("spoonTest"))
+                .forEach(type->{
             type.accept(clusteringVisitor);
         });
         ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,0f);
         clusteringServices.clusteringHierarchique();
         clusteringServices.generateModules();
-        System.out.println(clusteringServices.getModulesDendogramDot());
+        //System.out.println(clusteringServices.getModulesDendogramDot());
         System.out.println("--------------------");
-        //System.out.println(clusteringServices.getDendrogramDot());
+        System.out.println(clusteringServices.getDendrogramDot());
 
 
 /*

@@ -1,5 +1,6 @@
 package com.example.services.ClusteringClasses;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -10,7 +11,7 @@ public abstract class Clusterable {
     public abstract List<Clusterable> getClusterables();
     public abstract float getCouplingValue();
     //Méthode qui calcule le couplage entre this et un autre clusterable c
-    public float getCouplingWith(Clusterable c,
+    /*public float getCouplingWith(Clusterable c,
                                  HashMap<String,HashMap<String,Float>> classCouplingNote,
                                  List<String> classList) {
         float totalCouplingValue = 0.0f;
@@ -43,17 +44,25 @@ public abstract class Clusterable {
                 }
             }
         }
-        /*
+
         couplingValue = !classList.isEmpty()
                 ? totalCouplingValue/classList.size()
                 : couplingValue;
 
-         */
+
         couplingValue = totalCouplingValue;
         //System.out.println(totalCouplingValue);
         return couplingValue;
     }
+    */
     public abstract List<Clusterable> getDirectClusterables();
+    public List<Classes> getAllClasses() {
+        ArrayList<Classes> classesArrayList = new ArrayList<>();
+        for (Clusterable c1 : this.getClusterables()) {
+            if (!c1.isCluster()) classesArrayList.add((Classes) c1);
+        }
+        return classesArrayList;
+    }
     //Redéfinition de equals et hashcode pour comparer les clusterables par leur nom
     @Override
     public boolean equals(Object obj){
