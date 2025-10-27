@@ -23,13 +23,26 @@
         /* TITLES: hidden by default — will be shown when graph is rendered */
         .graphTitle { display: none; margin-bottom: 6px; }
         .graphTitle h3 { margin: 0; font-size: 1.05em; }
+        /* Directory list */
+        .dirEntry { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+        .dirEntry input[type="text"] { flex:1; }
+        .dirEntry button { width:28px; height:28px; padding:0; }
+        #addDirBtn { margin-left:4px; }
     </style>
 </head>
 <body>
     <h1>Générateur de graphe d'appels</h1>
     <form id="dirForm">
-        <label for="directory">Chemin du dossier :</label>
-        <input type="text" id="directory" name="directory" required>
+        <fieldset id="directoryFieldset" style="border:none;padding:0;margin:0 0 8px 0;">
+            <legend style="font-weight:normal;margin-bottom:6px;">Chemin du dossier :</legend>
+            <!-- container pour plusieurs chemins -->
+            <div id="directoryList">
+                <div class="dirEntry">
+                    <input type="text" id="directory_0" name="directory" required placeholder="Chemin du dossier (ex : C:\\monProjet)">
+                    <button type="button" id="addDirBtn">+</button>
+                </div>
+            </div>
+        </fieldset>
         <!-- déplacer le label à l'intérieur du container pour qu'il soit masqué avec l'input -->
         <div id="xContainer">
             <label for="x">Valeur de X :</label>
@@ -49,8 +62,18 @@
             <input type="number" id="cp" name="cp" value="0.5" step="0.01" min="0" max="1">
             <span id="cpHint" style="margin-left:8px;color:#666;font-size:0.9em"></span>
         </div>
-        <button type="submit">Analyser l'application</button>
-    </form>
+        <!-- container pour fichiers à exclure (liste dynamique) -->
+        <div id="excludedContainer" style="margin-top:8px;">
+            <label>Fichier à exclure :</label>
+            <div id="excludedList">
+                <div class="dirEntry">
+                    <input type="text" name="excluded" id="excluded_0" placeholder="ex: com.example.MyClass">
+                    <button type="button" id="addExcludedBtn">+</button>
+                </div>
+            </div>
+        </div>
+         <button type="submit">Analyser l'application</button>
+     </form>
     <div id="calculatorResults"></div>
 
     <!-- Call graph block -->
@@ -96,6 +119,86 @@
         // current selection (utilisé pour décider quel(s) titre(s) afficher)
         let currentAnalysisType = null;
 
+        // --- gestion des inputs directory multiples ---
+        function addDirectoryInput(value) {
+            const list = document.getElementById('directoryList');
+            const entry = document.createElement('div');
+            entry.className = 'dirEntry';
+            const index = list.querySelectorAll('input[name="directory"]').length;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'directory';
+            input.id = 'directory_' + index;
+            input.placeholder = 'Chemin du dossier (ex : C:\\monProjet)';
+            if (value) input.value = value;
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.textContent = '−';
+            removeBtn.onclick = function() { removeDirectoryInput(entry); };
+            entry.appendChild(input);
+            entry.appendChild(removeBtn);
+            list.appendChild(entry);
+        }
+        function removeDirectoryInput(entry) {
+            const list = document.getElementById('directoryList');
+            const inputs = list.querySelectorAll('input[name="directory"]');
+            if (inputs.length <= 1) {
+                // si dernier input, on le vide mais on ne le supprime pas
+                inputs[0].value = '';
+                return;
+            }
+            list.removeChild(entry);
+        }
+        function getDirectoryParams() {
+            const inputs = document.querySelectorAll('input[name="directory"]');
+            const parts = [];
+            inputs.forEach(inp => {
+                const v = inp.value.trim();
+                if (v) parts.push('directory=' + encodeURIComponent(v));
+            });
+            return parts.join('&');
+        }
+        // attacher le bouton + initial
+        document.getElementById('addDirBtn').addEventListener('click', function(){ addDirectoryInput(); });
+
+        // --- gestion des inputs excluded multiples ---
+        function addExcludedInput(value) {
+            const list = document.getElementById('excludedList');
+            const entry = document.createElement('div');
+            entry.className = 'dirEntry';
+            const index = list.querySelectorAll('input[name="excluded"]').length;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'excluded';
+            input.id = 'excluded_' + index;
+            input.placeholder = 'ex: com.example.MyClass';
+            if (value) input.value = value;
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.textContent = '−';
+            removeBtn.onclick = function() { removeExcludedInput(entry); };
+            entry.appendChild(input);
+            entry.appendChild(removeBtn);
+            list.appendChild(entry);
+        }
+        function removeExcludedInput(entry) {
+            const list = document.getElementById('excludedList');
+            const inputs = list.querySelectorAll('input[name="excluded"]');
+            if (inputs.length <= 1) { inputs[0].value = ''; return; }
+            list.removeChild(entry);
+        }
+        function getExcludedParams() {
+            const inputs = document.querySelectorAll('input[name="excluded"]');
+            const parts = [];
+            inputs.forEach(inp => {
+                const v = inp.value.trim();
+                if (v) parts.push('excluded=' + encodeURIComponent(v));
+            });
+            return parts.join('&');
+        }
+        // attacher le bouton + initial pour excluded
+        document.getElementById('addExcludedBtn').addEventListener('click', function(){ addExcludedInput(); });
+
         // Met à jour la visibilité des titres selon le type et les données renvoyées par le serveur
         function updateTitlesForResponse(type, data) {
             const titleMap = {
@@ -135,10 +238,19 @@
 
         document.getElementById('dirForm').onsubmit = async function(e) {
             e.preventDefault();
-            const dir = document.getElementById('directory').value;
+            // const dir = document.getElementById('directory').value;
             const x = document.getElementById('x').value;
             const type = document.getElementById('analysisType').value;
             const cp = document.getElementById('cp').value;
+
+            // au moins un chemin non vide
+            const dirParams = getDirectoryParams();
+            if (!dirParams) {
+                alert('Veuillez renseigner au moins un chemin de dossier.');
+                return;
+            }
+            // récupérer excluded (peut être vide)
+            const excludedParams = getExcludedParams();
 
             // mémoriser le type sélectionné (sera utilisé après réception de la réponse)
             currentAnalysisType = type;
@@ -155,23 +267,25 @@
             document.getElementById('zoomControls_modules').style.display = 'none';
 
             let url = '/getGraph';
-            let body = 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x);
+            // inclure excludedParams si présents
+            let body = dirParams + (excludedParams ? '&' + excludedParams : '') + '&x=' + encodeURIComponent(x);
 
             if (type === 'calling') {
                 url = '/analyze/calling';
+                body = dirParams + (excludedParams ? '&' + excludedParams : '');
             } else if (type === 'coupling') {
                 url = '/analyze/coupling';
-                body = 'directory=' + encodeURIComponent(dir);
+                body = dirParams + (excludedParams ? '&' + excludedParams : '');
             } else if (type === 'clustering') {
                 url = '/analyze/clustering';
-                body = 'directory=' + encodeURIComponent(dir) + '&cp=' + encodeURIComponent(cp);
+                body = dirParams + (excludedParams ? '&' + excludedParams : '') + '&cp=' + encodeURIComponent(cp);
             } else if (type === 'modules') {
                 // reuse clustering endpoint which will now also return modulesGraphData
                 url = '/analyze/clustering';
-                body = 'directory=' + encodeURIComponent(dir) + '&cp=' + encodeURIComponent(cp);
+                body = dirParams + (excludedParams ? '&' + excludedParams : '') + '&cp=' + encodeURIComponent(cp);
             } else if (type === 'statistics') {
                 url = '/analyze/statistics';
-                body = 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x);
+                body = dirParams + (excludedParams ? '&' + excludedParams : '') + '&x=' + encodeURIComponent(x);
             }
             // Si 'all' est choisi, on envoie cp pour que le graphe de modules en tienne compte
             if (type === 'all') {

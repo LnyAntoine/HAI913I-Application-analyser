@@ -17,7 +17,7 @@ public class ClusteringController {
     @PostMapping("/analyze/clustering")
     @ResponseBody
     public Map<String, Object> analyzeClustering(@RequestParam("directory") ArrayList<String> directory, @RequestParam(value = "cp", required = false, defaultValue = "0.5") float cp,
-                                                 @RequestParam("excluded") ArrayList<String> excluded
+                                                 @RequestParam(value = "excluded", required = false) ArrayList<String> excluded
 
     ) {
         CtModel model = AnalysisUtils.buildModel(directory);
