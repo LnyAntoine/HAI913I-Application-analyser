@@ -15,7 +15,7 @@ public class StatisticController {
 
     @PostMapping("/analyze/statistics")
     @ResponseBody
-    public Map<String, Object> analyzeStatistics(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x,
+    public Map<String, Object> analyzeStatistics(@RequestParam("directory") ArrayList<String> directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x,
                                                  @RequestParam(value = "excluded", required = false) ArrayList<String> excluded) {
         CtModel model = AnalysisUtils.buildModel(directory);
         Map<String, Object> result = new HashMap<>();

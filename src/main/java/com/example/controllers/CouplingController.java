@@ -15,7 +15,7 @@ public class CouplingController {
 
     @PostMapping("/analyze/coupling")
     @ResponseBody
-    public Map<String, Object> analyzeCoupling(@RequestParam("directory") String directory,
+    public Map<String, Object> analyzeCoupling(@RequestParam("directory") ArrayList<String> directory,
                                                @RequestParam(value = "excluded", required = false) ArrayList<String> excluded) {
         if (excluded == null) {
             excluded = new ArrayList<>();

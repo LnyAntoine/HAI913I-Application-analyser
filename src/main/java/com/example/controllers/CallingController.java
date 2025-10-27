@@ -15,7 +15,7 @@ public class CallingController {
 
     @PostMapping("/analyze/calling")
     @ResponseBody
-    public Map<String, Object> analyzeCalling(@RequestParam("directory") String directory,
+    public Map<String, Object> analyzeCalling(@RequestParam("directory") ArrayList<String> directory,
                                                @RequestParam(value = "excluded", required = false) ArrayList<String> excluded) {
         CtModel model = AnalysisUtils.buildModel(directory);
         Map<String, Object> result = new HashMap<>();
