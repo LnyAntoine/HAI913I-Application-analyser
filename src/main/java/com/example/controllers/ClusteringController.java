@@ -16,18 +16,25 @@ public class ClusteringController {
 
     @PostMapping("/analyze/clustering")
     @ResponseBody
-    public Map<String, Object> analyzeClustering(@RequestParam("directory") String directory, @RequestParam(value = "cp", required = false, defaultValue = "0.5") float cp) {
+    public Map<String, Object> analyzeClustering(@RequestParam("directory") String directory, @RequestParam(value = "cp", required = false, defaultValue = "0.5") float cp,
+                                                 @RequestParam("excluded") ArrayList<String> excluded
+
+    ) {
         CtModel model = AnalysisUtils.buildModel(directory);
         Map<String, Object> result = new HashMap<>();
         if (model == null) {
             result.put("error", "Impossible de construire le modèle à partir du répertoire fourni.");
             return result;
         }
-        ArrayList<String> excluded = new ArrayList<>();
+        if (excluded == null) {
+            excluded = new ArrayList<>();
+        }
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
+        ArrayList<String> finalExcluded = excluded;
         model.getAllTypes().stream()
-                .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                .filter(ctType -> !finalExcluded.contains(ctType.getQualifiedName()))
                 .forEach(type -> type.accept(clusteringVisitor));
+
         ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor, cp);
         clusteringServices.clusteringHierarchique();
         result.put("clusterGraphData", clusteringServices.getDendrogramDot());

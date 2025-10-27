@@ -8,11 +8,9 @@ import com.example.services.visitor.CallingVisitor;
 import com.example.services.visitor.CouplingVisitor;
 import com.example.services.visitor.ClusteringVisitor;
 import com.example.services.visitor.StatisticsVisitor;
-import com.example.controllers.AnalysisUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.stereotype.Controller;
 
-import spoon.Launcher;
 import spoon.reflect.CtModel;
 
 import java.util.*;
@@ -23,49 +21,69 @@ public class CombinedController {
     @PostMapping("/getGraph")
     @ResponseBody
     public Map<String, Object> getGraph(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x,
-                                        @RequestParam(value = "cp", required = false, defaultValue = "0.5") float cp) {
+                                        @RequestParam(value = "cp", required = false, defaultValue = "0.5") float cp,
+                                        @RequestParam(value = "excluded", required = false) ArrayList<String> excluded) {
         CtModel model = AnalysisUtils.buildModel(directory);
 
         HashMap<String, Object> resultTotal = new HashMap<>();
 
-        ArrayList<String> callFilter = new  ArrayList<>();
+        if (model == null) {
+            resultTotal.put("error", "Impossible de construire le modèle à partir du répertoire fourni.");
+            return resultTotal;
+        }
+        if (excluded == null) {
+            excluded = new ArrayList<>();
+        }
+
+        ArrayList<String> callFilter = new ArrayList<>();
         ArrayList<String> statisticFiler = new ArrayList<>();
         ArrayList<String> couplingFilter = new ArrayList<>();
         ArrayList<String> clusteringFilter = new ArrayList<>();
-        resultTotal.put("callGraphData", this.getCallingGraphData(model,callFilter));
-        resultTotal.put("couplingGraphData",this.getCouplingGraphData(model,couplingFilter));
-        resultTotal.put("statisticData",this.getStatisticCalculatorData(model,x,statisticFiler));
+        resultTotal.put("callGraphData", this.getCallingGraphData(model,callFilter, excluded));
+        resultTotal.put("couplingGraphData",this.getCouplingGraphData(model,couplingFilter,excluded));
+        resultTotal.put("statisticData",this.getStatisticCalculatorData(model,x,statisticFiler,excluded));
 
         // Récupère à la fois le dendrogramme du clustering et le dendrogramme des modules
-        Map<String, String> clusterResults = this.getClusterGraphData(model,clusteringFilter,cp);
-        if (clusterResults != null) {
-            resultTotal.put("clusterGraphData", clusterResults.get("dendrogram"));
-            resultTotal.put("modulesGraphData", clusterResults.get("modules"));
-        }
+        Map<String, String> clusterResults = this.getClusterGraphData(model,clusteringFilter,cp,excluded);
+        resultTotal.put("clusterGraphData", clusterResults.get("dendrogram"));
+        resultTotal.put("modulesGraphData", clusterResults.get("modules"));
         return resultTotal;
     }
 
-    private Object getCouplingGraphData(CtModel model,ArrayList<String> filters){
+    private Object getCouplingGraphData(CtModel model,ArrayList<String> filters,ArrayList<String> excluded){
         CouplingVisitor couplingGraphVisitor = new CouplingVisitor();
-        model.getAllTypes().forEach(type -> type.accept(couplingGraphVisitor));
+        if (excluded != null && !excluded.isEmpty())
+            model.getAllTypes().stream()
+                    .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                    .forEach(type -> type.accept(couplingGraphVisitor));
+        else
+            model.getAllTypes().forEach(type -> type.accept(couplingGraphVisitor));
         CouplingServices couplingGraphServices = new CouplingServices(couplingGraphVisitor);
         couplingGraphServices.generateGraphFilter(filters);
         return  couplingGraphServices.getGraphAsDot();
     }
-    private Object getCallingGraphData(CtModel model,ArrayList<String> filters){
+    private Object getCallingGraphData(CtModel model,ArrayList<String> filters,ArrayList<String> excluded){
         CallingVisitor callingVisitor = new CallingVisitor();
-        model.getAllTypes().forEach(type -> type.accept(callingVisitor));
+        if (excluded != null && !excluded.isEmpty())
+            model.getAllTypes().stream()
+                    .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                    .forEach(type -> type.accept(callingVisitor));
+        else
+            model.getAllTypes().forEach(type -> type.accept(callingVisitor));
         CallingServices callingServices = new CallingServices(callingVisitor);
         callingServices.generateGraphFilter(filters);
         return callingServices.getGraphAsDot();
     }
 
     // Retourne un map contenant le DOT du dendrogramme et le DOT des modules (après génération)
-    private Map<String, String> getClusterGraphData(CtModel model,ArrayList<String> filters,float CP){
+    private Map<String, String> getClusterGraphData(CtModel model,ArrayList<String> filters,float CP,ArrayList<String> excluded){
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
-        model.getAllTypes().forEach(type ->{
-            type.accept(clusteringVisitor);
-        });
+        if (filters != null && !filters.isEmpty())
+            model.getAllTypes().stream()
+                    .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                    .forEach(type -> type.accept(clusteringVisitor));
+        else
+            model.getAllTypes().forEach(type -> type.accept(clusteringVisitor));
         ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,CP);
         // Lance le clustering hiérarchique
         clusteringServices.clusteringHierarchique();
@@ -79,9 +97,15 @@ public class CombinedController {
         return result;
     }
 
-    private Object getStatisticCalculatorData(CtModel model,int x,ArrayList<String> filters){
+    private Object getStatisticCalculatorData(CtModel model,int x,ArrayList<String> filters,ArrayList<String> excluded){
         StatisticsVisitor statisticsVisitor = new StatisticsVisitor();
-        model.getAllTypes().forEach(type -> type.accept(statisticsVisitor));
+
+        if (excluded != null && !excluded.isEmpty())
+            model.getAllTypes().stream()
+                    .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                    .forEach(type -> type.accept(statisticsVisitor));
+        else model.getAllTypes().forEach(type -> type.accept(statisticsVisitor));
+
         StatisticCalculatorServices statisticCalculatorServices = new StatisticCalculatorServices(statisticsVisitor);
         statisticCalculatorServices.setX(x);
         statisticCalculatorServices.calculateFilter(filters);

@@ -15,15 +15,22 @@ public class StatisticController {
 
     @PostMapping("/analyze/statistics")
     @ResponseBody
-    public Map<String, Object> analyzeStatistics(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x) {
+    public Map<String, Object> analyzeStatistics(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x,
+                                                 @RequestParam(value = "excluded", required = false) ArrayList<String> excluded) {
         CtModel model = AnalysisUtils.buildModel(directory);
         Map<String, Object> result = new HashMap<>();
         if (model == null) {
             result.put("error", "Impossible de construire le modèle à partir du répertoire fourni.");
             return result;
         }
+        if (excluded == null) {
+            excluded = new ArrayList<>();
+        }
         StatisticsVisitor statisticsVisitor = new StatisticsVisitor();
-        model.getAllTypes().forEach(type -> type.accept(statisticsVisitor));
+        ArrayList<String> finalExcluded = excluded;
+        model.getAllTypes().stream()
+                .filter(ctType -> !finalExcluded.contains(ctType.getQualifiedName()))
+                .forEach(type -> type.accept(statisticsVisitor));
         StatisticCalculatorServices statisticCalculatorServices = new StatisticCalculatorServices(statisticsVisitor);
         statisticCalculatorServices.setX(x);
         statisticCalculatorServices.calculateFilter(new ArrayList<>());
@@ -33,4 +40,3 @@ public class StatisticController {
         return resultTotal;
     }
 }
-
