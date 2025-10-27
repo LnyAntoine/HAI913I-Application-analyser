@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Call Graph</title>
@@ -9,8 +9,20 @@
         #calculatorResults ul { list-style: none; padding: 0; }
         #calculatorResults li { margin-bottom: 0.7em; }
         #graph { margin-top: 2em; text-align: center; }
-        #zoomControls { text-align: center; margin: 1em 0; }
-        #zoomControls button { cursor: pointer; }
+        .zoomControls { text-align: center; margin: 0.5em 0; }
+        .zoomControls button { cursor: pointer; }
+        /* wrapper pour séparer contrôles et zone scrollable */
+        .graphBlock { margin-top: 2em; max-width:90vw; }
+        /* viewport scrollable séparée des contrôles : garder taille fixe et box-sizing pour éviter décalage quand scrollbar apparaît */
+        .graphViewport { text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0; box-sizing:border-box; }
+        /* s'assurer que les contrôles restent visibles et ne sont pas recouverts */
+        .zoomControls { position: sticky; top: 0; z-index: 999; width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.95); padding: 6px 8px; display:flex; justify-content:center; gap:8px; align-items:center; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        /* boutons plus lisibles */
+        .zoomControls button { margin: 0; padding: 6px 10px; }
+        .zoomControls input[type="range"] { vertical-align: middle; }
+        /* TITLES: hidden by default — will be shown when graph is rendered */
+        .graphTitle { display: none; margin-bottom: 6px; }
+        .graphTitle h3 { margin: 0; font-size: 1.05em; }
     </style>
 </head>
 <body>
@@ -18,35 +30,109 @@
     <form id="dirForm">
         <label for="directory">Chemin du dossier :</label>
         <input type="text" id="directory" name="directory" required>
-        <label for="x">Valeur de X :</label>
-        <input type="number" id="x" name="x" value="0" min="0" required>
+        <!-- déplacer le label à l'intérieur du container pour qu'il soit masqué avec l'input -->
+        <div id="xContainer">
+            <label for="x">Valeur de X :</label>
+            <input type="number" id="x" name="x" value="0" min="0" required>
+        </div>
         <label for="analysisType">Type d'analyse :</label>
         <select id="analysisType" name="analysisType">
             <option value="all">Tout</option>
             <option value="statistics">Statistiques</option>
             <option value="coupling">Couplage</option>
             <option value="clustering">Clustering</option>
+            <option value="modules">Modules</option>
             <option value="calling">Appels</option>
         </select>
-        <label for="cp">CP (pour clustering) :</label>
-        <input type="number" id="cp" name="cp" value="0.5" step="0.01" min="0" max="1">
+        <div id="cpContainer">
+            <label for="cp">CP (pour clustering) :</label>
+            <input type="number" id="cp" name="cp" value="0.5" step="0.01" min="0" max="1">
+            <span id="cpHint" style="margin-left:8px;color:#666;font-size:0.9em"></span>
+        </div>
         <button type="submit">Analyser l'application</button>
     </form>
     <div id="calculatorResults"></div>
-    <div id="zoomcontrol">
-        <div id="idc"></div>
-    </div>
-    <div id="graphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
-        <div id="graph"></div>
-    </div>
-    <div id="couplingGraphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
-        <div id="couplingGraph"></div>
+
+    <!-- Call graph block -->
+    <div class="graphBlock" id="callBlock">
+        <div class="graphTitle"><h3>Appels</h3></div>
+        <div class="zoomControls" id="zoomControls_graph" style="display:none;"></div>
+        <div id="graphContainer" class="graphViewport">
+            <div id="graph"></div>
+        </div>
     </div>
 
-    <div id="clusteringGraphContainer" style="margin-top:2em; text-align:left; overflow-x:auto; overflow-y:auto; max-width:90vw; max-height:70vh; min-height:30px; padding:0;">
-        <div id="clusteringGraph"></div>
+    <!-- Coupling block -->
+    <div class="graphBlock" id="couplingBlock">
+        <div class="graphTitle"><h3>Couplage</h3></div>
+        <div class="zoomControls" id="zoomControls_coupling" style="display:none;"></div>
+        <div id="couplingGraphContainer" class="graphViewport">
+            <div id="couplingGraph"></div>
+        </div>
     </div>
+
+    <!-- Clustering block -->
+    <div class="graphBlock" id="clusteringBlock">
+        <div class="graphTitle"><h3>Clustering (dendrogramme)</h3></div>
+        <div class="zoomControls" id="zoomControls_clustering" style="display:none;"></div>
+        <div id="clusteringGraphContainer" class="graphViewport">
+            <div id="clusteringGraph"></div>
+        </div>
+    </div>
+
+    <!-- Modules block placed below clustering -->
+    <div class="graphBlock" id="modulesBlock">
+        <div class="graphTitle"><h3>Modules</h3></div>
+        <div class="zoomControls" id="zoomControls_modules" style="display:none;"></div>
+        <div id="modulesGraphContainer" class="graphViewport">
+            <div id="modulesGraph"></div>
+        </div>
+    </div>
+
     <script>
+        const titles = document.querySelectorAll('.graphTitle');
+        titles.forEach(t => t.style.display = 'none');
+
+        // current selection (utilisé pour décider quel(s) titre(s) afficher)
+        let currentAnalysisType = null;
+
+        // Met à jour la visibilité des titres selon le type et les données renvoyées par le serveur
+        function updateTitlesForResponse(type, data) {
+            const titleMap = {
+                calling: document.querySelector('#callBlock .graphTitle'),
+                coupling: document.querySelector('#couplingBlock .graphTitle'),
+                clustering: document.querySelector('#clusteringBlock .graphTitle'),
+                modules: document.querySelector('#modulesBlock .graphTitle')
+            };
+            // masquer toutes
+            Object.values(titleMap).forEach(t => { if (t) t.style.display = 'none'; });
+
+            if (type === 'statistics') {
+                // rien à afficher pour statistics
+                return;
+            }
+
+            if (type === 'all') {
+                if (data.callGraphData) titleMap.calling && (titleMap.calling.style.display = 'block');
+                if (data.couplingGraphData) titleMap.coupling && (titleMap.coupling.style.display = 'block');
+                if (data.clusterGraphData) titleMap.clustering && (titleMap.clustering.style.display = 'block');
+                if (data.modulesGraphData) titleMap.modules && (titleMap.modules.style.display = 'block');
+                return;
+            }
+
+            // cas d'un type spécifique
+            if (type === 'calling' && data.callGraphData) {
+                titleMap.calling && (titleMap.calling.style.display = 'block');
+            } else if (type === 'coupling' && data.couplingGraphData) {
+                titleMap.coupling && (titleMap.coupling.style.display = 'block');
+            } else if (type === 'clustering' && data.clusterGraphData) {
+                titleMap.clustering && (titleMap.clustering.style.display = 'block');
+            } else if (type === 'modules') {
+                if (data.modulesGraphData) titleMap.modules && (titleMap.modules.style.display = 'block');
+                else if (data.clusterGraphData) titleMap.clustering && (titleMap.clustering.style.display = 'block');
+            }
+        }
+
         document.getElementById('dirForm').onsubmit = async function(e) {
             e.preventDefault();
             const dir = document.getElementById('directory').value;
@@ -54,11 +140,19 @@
             const type = document.getElementById('analysisType').value;
             const cp = document.getElementById('cp').value;
 
-            // Clear previous graphs
+            // mémoriser le type sélectionné (sera utilisé après réception de la réponse)
+            currentAnalysisType = type;
+
+            // Clear previous graphs and hide zoom controls
             document.getElementById('graph').innerHTML = '';
             document.getElementById('couplingGraph').innerHTML = '';
             document.getElementById('clusteringGraph').innerHTML = '';
+            document.getElementById('modulesGraph').innerHTML = '';
             document.getElementById('calculatorResults').innerHTML = '';
+            document.getElementById('zoomControls_graph').style.display = 'none';
+            document.getElementById('zoomControls_coupling').style.display = 'none';
+            document.getElementById('zoomControls_clustering').style.display = 'none';
+            document.getElementById('zoomControls_modules').style.display = 'none';
 
             let url = '/getGraph';
             let body = 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x);
@@ -71,9 +165,18 @@
             } else if (type === 'clustering') {
                 url = '/analyze/clustering';
                 body = 'directory=' + encodeURIComponent(dir) + '&cp=' + encodeURIComponent(cp);
+            } else if (type === 'modules') {
+                // reuse clustering endpoint which will now also return modulesGraphData
+                url = '/analyze/clustering';
+                body = 'directory=' + encodeURIComponent(dir) + '&cp=' + encodeURIComponent(cp);
             } else if (type === 'statistics') {
                 url = '/analyze/statistics';
                 body = 'directory=' + encodeURIComponent(dir) + '&x=' + encodeURIComponent(x);
+            }
+            // Si 'all' est choisi, on envoie cp pour que le graphe de modules en tienne compte
+            if (type === 'all') {
+                // conserver endpoint combiné (/getGraph) mais ajouter cp au body
+                body += '&cp=' + encodeURIComponent(cp);
             }
 
             const response = await fetch(url, {
@@ -83,40 +186,40 @@
             });
             const data = await response.json();
 
+            // Attendre la réponse du serveur avant de mettre à jour les titres
+            updateTitlesForResponse(type, data);
+
             // Data peut contenir différentes clefs selon l'endpoint
             if (data.statisticData) {
                 const stat = data.statisticData;
-                // Si endpoint combiné, stat peut être l'objet result/order
                 if (stat.result && stat.order) {
                     showCalculatorResults(stat.result, stat.order);
                 } else if (stat.statisticData) {
-                    // cas where combined returned nested map
                     showCalculatorResults(stat.statisticData.result, stat.statisticData.order);
                 } else {
-                    // cas endpoint /analyze/statistics
                     showCalculatorResults(stat.result || stat, stat.order || []);
                 }
             }
 
-            if (data.callGraphData) {
-                drawCallingGraph(data.callGraphData);
-            } else if (data.couplingGraphData) {
-                drawCouplingGraphViz(data.couplingGraphData);
-            } else if (data.clusterGraphData) {
-                drawClusteringGraphViz(data.clusterGraphData);
+            // Rendu en fonction du choix
+            if (type === 'all') {
+                if (data.callGraphData) drawCallingGraph(data.callGraphData);
+                if (data.couplingGraphData) drawCouplingGraphViz(data.couplingGraphData);
+                if (data.clusterGraphData) drawClusteringGraphViz(data.clusterGraphData);
+                if (data.modulesGraphData) drawModulesGraphViz(data.modulesGraphData);
+            } else if (type === 'modules') {
+                if (data.modulesGraphData) drawModulesGraphViz(data.modulesGraphData);
+                else if (data.clusterGraphData) drawClusteringGraphViz(data.clusterGraphData);
             } else {
-                // pour endpoint combiné on peut avoir plusieurs
                 if (data.callGraphData) drawCallingGraph(data.callGraphData);
                 if (data.couplingGraphData) drawCouplingGraphViz(data.couplingGraphData);
                 if (data.clusterGraphData) drawClusteringGraphViz(data.clusterGraphData);
             }
         };
+
         function showCalculatorResults(results, order) {
             const div = document.getElementById('calculatorResults');
-            if (!results) {
-                div.innerHTML = '';
-                return;
-            }
+            if (!results) { div.innerHTML = ''; return; }
             let html = '<h2>Résultats Calculator</h2><ul>';
             for (const key of order) {
                 if (results[key]) {
@@ -127,24 +230,39 @@
             div.innerHTML = html;
         }
 
+        function addZoomControlsFor(containerId, svg) {
+            if (!svg) return;
+            const controlsId = 'zoomControls_' + containerId;
+            const controls = document.getElementById(controlsId);
+            // build controls HTML
+            controls.innerHTML = '';
+            const btnOut = document.createElement('button'); btnOut.type = 'button'; btnOut.textContent = '-';
+            const range = document.createElement('input'); range.type = 'range'; range.min = '0.1'; range.max = '8'; range.step = '0.01'; range.value = '0.8';
+            const btnIn = document.createElement('button'); btnIn.type = 'button'; btnIn.textContent = '+';
+            controls.appendChild(btnOut); controls.appendChild(range); controls.appendChild(btnIn);
+            controls.style.display = 'block';
+            function setZoom(val) {
+                svg.style.transform = `scale(${val})`;
+                svg.style.transformOrigin = 'top left';
+            }
+            range.oninput = function() { setZoom(this.value); };
+            btnIn.onclick = function() { let v = Math.min(8, parseFloat(range.value) + 0.1); range.value = v; setZoom(v); };
+            btnOut.onclick = function() { let v = Math.max(0.1, parseFloat(range.value) - 0.1); range.value = v; setZoom(v); };
+            setZoom(range.value);
+        }
+
         function drawClusteringGraphViz(dot){
             try {
                 const viz = new Viz();
-                viz.renderSVGElement(dot)
-                    .then(function(element) {
-                        element.style.maxWidth = '100%';
-                        element.style.height = 'auto';
-                        element.style.width = '100%';
-                        element.style.display = 'block';
-                        element.style.margin = '0';
-                        element.style.padding = '0';
-                        element.id = 'graphSvg';
-                        document.getElementById('clusteringGraph').appendChild(element);
-                        addZoomControls();
-                    })
-                    .catch(function(error) {
-                        document.getElementById('clusteringGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
-                    });
+                viz.renderSVGElement(dot).then(function(element) {
+                    element.style.maxWidth = '100%'; element.style.height = 'auto'; element.style.width = '100%';
+                    element.style.display = 'block'; element.style.margin = '0'; element.style.padding = '0';
+                    element.classList.add('graphSvg');
+                    document.getElementById('clusteringGraph').appendChild(element);
+                    addZoomControlsFor('clustering', element);
+                }).catch(function() {
+                    document.getElementById('clusteringGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                });
             } catch (e) {
                 document.getElementById('clusteringGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
             }
@@ -153,85 +271,90 @@
         function drawCouplingGraphViz(dot){
             try {
                 const viz = new Viz();
-                viz.renderSVGElement(dot)
-                    .then(function(element) {
-                        element.style.maxWidth = '100%';
-                        element.style.height = 'auto';
-                        element.style.width = '100%';
-                        element.style.display = 'block';
-                        element.style.margin = '0';
-                        element.style.padding = '0';
-                        element.id = 'graphSvg';
-                        document.getElementById('couplingGraph').appendChild(element);
-                        addZoomControls();
-                    })
-                    .catch(function(error) {
-                        document.getElementById('couplingGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
-                    });
+                viz.renderSVGElement(dot).then(function(element) {
+                    element.style.maxWidth = '100%'; element.style.height = 'auto'; element.style.width = '100%';
+                    element.style.display = 'block'; element.style.margin = '0'; element.style.padding = '0';
+                    element.classList.add('graphSvg');
+                    document.getElementById('couplingGraph').appendChild(element);
+                    addZoomControlsFor('coupling', element);
+                }).catch(function() {
+                    document.getElementById('couplingGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                });
             } catch (e) {
                 document.getElementById('couplingGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
             }
         }
+
         function drawCallingGraph(dot) {
             try {
                 const viz = new Viz();
-                viz.renderSVGElement(dot)
-                    .then(function(element) {
-                        element.style.maxWidth = '100%';
-                        element.style.height = 'auto';
-                        element.style.width = '100%';
-                        element.style.display = 'block';
-                        element.style.margin = '0';
-                        element.style.padding = '0';
-                        element.id = 'graphSvg';
-                        document.getElementById('graph').appendChild(element);
-                        addZoomControls();
-                    })
-                    .catch(function(error) {
-                        document.getElementById('graph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
-                    });
+                viz.renderSVGElement(dot).then(function(element) {
+                    element.style.maxWidth = '100%'; element.style.height = 'auto'; element.style.width = '100%';
+                    element.style.display = 'block'; element.style.margin = '0'; element.style.padding = '0';
+                    element.classList.add('graphSvg');
+                    document.getElementById('graph').appendChild(element);
+                    addZoomControlsFor('graph', element);
+                }).catch(function() {
+                    document.getElementById('graph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                });
             } catch (e) {
                 document.getElementById('graph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
             }
         }
-        // Ajout des contrôles de zoom dynamiques
-        function addZoomControls() {
-            let controls = document.getElementById('zoomControls');
-            if (!controls) {
-                controls = document.createElement('div');
-                controls.id = 'zoomControls';
-                controls.style.textAlign = 'center';
-                controls.style.margin = '1em 0';
-                controls.innerHTML = `
-                    <button type="button" id="zoomOut">-</button>
-                    <input type="range" id="zoomSlider" min="0.1" max="8" step="0.01" value="0.6" style="width:180px;vertical-align:middle;">
-                    <button type="button" id="zoomIn">+</button>
-                `;
-                document.getElementById('zoomcontrol').insertBefore(controls, document.getElementById('idc'));
+
+        function drawModulesGraphViz(dot){
+            try {
+                const viz = new Viz();
+                viz.renderSVGElement(dot).then(function(element) {
+                    element.style.maxWidth = '100%'; element.style.height = 'auto'; element.style.width = '100%';
+                    element.style.display = 'block'; element.style.margin = '0'; element.style.padding = '0';
+                    element.classList.add('graphSvg');
+                    document.getElementById('modulesGraph').appendChild(element);
+                    addZoomControlsFor('modules', element);
+                }).catch(function() {
+                    document.getElementById('modulesGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
+                });
+            } catch (e) {
+                document.getElementById('modulesGraph').innerHTML = '<b>Erreur lors du rendu du graphe.</b>';
             }
-            const svg = document.getElementById('graphSvg');
-            const slider = document.getElementById('zoomSlider');
-            const zoomIn = document.getElementById('zoomIn');
-            const zoomOut = document.getElementById('zoomOut');
-            function setZoom(val) {
-                if (!svg) return;
-                svg.style.transform = `scale(${val})`;
-                svg.style.transformOrigin = 'top left';
-            }
-            slider.oninput = function() { setZoom(this.value); };
-            zoomIn.onclick = function() {
-                let v = Math.min(4, parseFloat(slider.value) + 0.1);
-                slider.value = v;
-                setZoom(v);
-            };
-            zoomOut.onclick = function() {
-                let v = Math.max(0.2, parseFloat(slider.value) - 0.1);
-                slider.value = v;
-                setZoom(v);
-            };
-            // Valeur initiale
-            setZoom(slider.value);
         }
-    </script>
+
+        // Met à jour la visibilité des inputs X et CP selon le choix d'analyse
+        function updateVisibility() {
+            const type = document.getElementById('analysisType').value;
+            const xContainer = document.getElementById('xContainer');
+            const cpContainer = document.getElementById('cpContainer');
+            const xInput = document.getElementById('x');
+            const cpInput = document.getElementById('cp');
+            const cpHint = document.getElementById('cpHint');
+             // X visible uniquement pour 'all' ou 'statistics'
+             if (type === 'all' || type === 'statistics') {
+                 xContainer.style.display = 'inline-block';
+                 if (xInput) xInput.disabled = false;
+             } else {
+                 xContainer.style.display = 'none';
+                 if (xInput) xInput.disabled = true;
+             }
+             // CP visible uniquement pour 'all' ou 'modules'
+             if (type === 'all' || type === 'modules') {
+                 cpContainer.style.display = 'inline-block';
+                 if (cpInput) {
+                    // la valeur de CP impacte désormais le graphe de modules même pour 'all' => activer
+                    cpInput.disabled = false;
+                    if (cpHint) cpHint.textContent = '';
+                 }
+             } else {
+                 cpContainer.style.display = 'none';
+                 if (cpInput) cpInput.disabled = true;
+                 if (cpHint) cpHint.textContent = '';
+             }
+         }
+        // mettre à jour visibilité des inputs lors du changement de sélection
+        document.getElementById('analysisType').addEventListener('change', function(e){
+            updateVisibility();
+        });
+         // appeler au chargement pour initialiser l'état
+         updateVisibility();
+     </script>
 </body>
 </html>

@@ -33,12 +33,12 @@ public class spoonTest {
                 .forEach(type->{
             type.accept(clusteringVisitor);
         });
-        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,0f);
+        ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,0.1f);
         clusteringServices.clusteringHierarchique();
         clusteringServices.generateModules();
-        //System.out.println(clusteringServices.getModulesDendogramDot());
+        System.out.println(clusteringServices.getModulesDendogramDot());
         System.out.println("--------------------");
-        System.out.println(clusteringServices.getDendrogramDot());
+        //System.out.println(clusteringServices.getDendrogramDot());
 
 
 /*

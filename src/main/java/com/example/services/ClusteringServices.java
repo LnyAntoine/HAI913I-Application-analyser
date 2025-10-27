@@ -43,15 +43,7 @@ public class ClusteringServices {
             bestCluster = getBestCluster(clusters);
             assert bestCluster != null;
             //On retire les sous-clusters du meilleur cluster de la liste
-/*
-            for (Clusterable cluster : bestCluster.getClusterables()) {
-                int index = getIndex(cluster, clusters);
-                if (index >= 0) {
-                    clusters.remove(index);
-                }
-            }
 
- */
             clusters.removeAll(bestCluster.getClusterables());
 
             if (!clusters.contains(bestCluster)) {
@@ -145,7 +137,6 @@ public class ClusteringServices {
     //Génère les modules à partir du cluster final
     public void generateModules(){
         modules = getModules(finalCluster);
-        System.out.println("modules :"+modules);
     }
 
     //Récupère tous les modules valides et les classes esseulés d'un clusterable
@@ -153,7 +144,7 @@ public class ClusteringServices {
         if (!c.isCluster()) return c.getDirectClusterables();
         if (isValidModule(c)){
             List<Clusterable> sons = new ArrayList<>(c.getAllClasses());
-            Clusterable module = new Cluster(sons,c.getCouplingValue());
+            Clusterable module = new Cluster(sons,getAverageSonCoupling(c));
             return List.of(module);
         }
         List<Clusterable> finalList = new ArrayList<>();
@@ -171,16 +162,23 @@ public class ClusteringServices {
         if (!c1.isCluster()){
             return false;
         }
+        float averageSonCoupling = getAverageSonCoupling(c1);
+        return (averageSonCoupling) >= cp
+                && c1.getCouplingValue() >= (averageSonCoupling);
+    }
+
+    private float getAverageSonCoupling(Clusterable c1){
+        List<Clusterable> clusterableList = c1.getDirectClusterables();
         float totalSonCoupling = 0;
-        int numberOfSons = clusterableList.size();
+        int numberOfSons = 0;
         for (Clusterable son : clusterableList){
-            totalSonCoupling += (float) getInternalCall(son) /getTotalCall(c1);
+            numberOfSons++;
+            totalSonCoupling += son.getCouplingValue();
         }
         if (numberOfSons==0){
-            return false;
+            return 0f;
         }
-        return (totalSonCoupling/numberOfSons) >= cp
-                && c1.getCouplingValue() >= (totalSonCoupling/numberOfSons);
+        return totalSonCoupling/numberOfSons;
     }
 
     private float getCouplingBetween(Clusterable c1, Clusterable c2){
@@ -299,11 +297,19 @@ public class ClusteringServices {
         if (totalCall > 0){CM = CM/totalCall;}
         if (totalFields > 0){CA = CA/totalFields;}
         if (totalParams > 0){CP = CP/totalParams;}
-        if (c1.getName().toLowerCase().contains("clustering")) {
+        /*if (c1.getName().toLowerCase().contains("clusteringservices")) {
             System.out.println(c1.getName() +" | "+ c2.getName());
             System.out.println(CM+" | "+CA+" | "+CP);
             System.out.println((CM+CA+CP)/3);
+            System.out.println("Total classes : "+totalClasses);
+            System.out.println("Total call : "+totalCall);
+            System.out.println("Total fields : "+totalFields);
+            System.out.println("Total params : "+totalParams);
+
         }
+         */
+
+
         return (CM+CA+CP)/3;
     }
 
@@ -320,8 +326,10 @@ public class ClusteringServices {
             }
             if (clusteringFieldMap.containsKey(bbC1.getName())) {
                 HashMap<String, Integer> relationsMap = clusteringFieldMap.get(bbC1.getName());
-                for (Integer nbFields : relationsMap.values()) {
-                            totalFields += nbFields;
+                for (String types : relationsMap.keySet()) {
+                    if (classes.contains(types)){
+                        totalFields += relationsMap.get(types);
+                    }
                 }
             }
         }
@@ -342,8 +350,10 @@ public class ClusteringServices {
             }
             if (clusteringParamsMap.containsKey(bbC1.getName())) {
                 HashMap<String, Integer> relationsMap = clusteringParamsMap.get(bbC1.getName());
-                for (Integer nbParams : relationsMap.values()) {
-                            totalParams += nbParams;
+                for (String types : relationsMap.keySet()) {
+                    if (classes.contains(types)){
+                        totalParams += relationsMap.get(types);
+                    }
                 }
             }
         }
@@ -366,7 +376,11 @@ public class ClusteringServices {
             }
             if (clusteringInvocationMap.containsKey(bbC1.getName())) {
                 HashMap<String, HashMap<String, HashMap<String, Integer>>> relationsMap = clusteringInvocationMap.get(bbC1.getName());
-                for (HashMap<String, HashMap<String, Integer>> methodsMap : relationsMap.values()) {
+                for (String toClasses : relationsMap.keySet()) {
+                    if (!toClasses.contains(c1.getName())){
+                        continue;
+                    }
+                    HashMap<String, HashMap<String, Integer>> methodsMap = relationsMap.get(toClasses);
                     for (HashMap<String, Integer> optionsMap : methodsMap.values()) {
                         if (optionsMap.containsKey("call")) {
                             totalCall += optionsMap.get("call");

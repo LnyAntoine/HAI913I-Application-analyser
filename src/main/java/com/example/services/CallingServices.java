@@ -26,16 +26,21 @@ public class CallingServices {
         this.invocations = visitor.getInvocations();
     }
 
+    private String safeLabel(String in) {
+        if (in == null) return "";
+        return in.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
     public String getGraphAsDot(){
         StringBuilder dot = new StringBuilder();
         dot.append("digraph CallingGraph {\n");
         if (invocations == null || invocations.isEmpty()) {
-            dot.append("}");
+            dot.append("}\n");
             return dot.toString();
         }
         // Ajout des noeuds
         for (String node : invocations.keySet()) {
-            dot.append("  \"").append(node).append("\";\n");
+            dot.append("  \"").append(safeLabel(node)).append("\";\n");
         }
         // Ajout des relations
         for (String from : invocations.keySet()) {
@@ -43,7 +48,8 @@ public class CallingServices {
             ArrayList<String> targets = invocations.get(from);
             if (targets != null) {
                 for (String to : targets) {
-                        dot.append("  \"").append(from).append("\" -> "+to+" \";\n");
+                    dot.append("  \"").append(safeLabel(from)).append("\" -> \"")
+                            .append(safeLabel(to)).append("\";\n");
                 }
             }
         }

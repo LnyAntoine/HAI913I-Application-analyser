@@ -1,4 +1,4 @@
-/*package com.example.controllers;
+package com.example.controllers;
 
 import com.example.services.CallingServices;
 import com.example.services.CouplingServices;
@@ -22,7 +22,8 @@ public class CombinedController {
 
     @PostMapping("/getGraph")
     @ResponseBody
-    public Map<String, Object> getGraph(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x) {
+    public Map<String, Object> getGraph(@RequestParam("directory") String directory, @RequestParam(value = "x", required = false, defaultValue = "0") int x,
+                                        @RequestParam(value = "cp", required = false, defaultValue = "0.5") float cp) {
         CtModel model = AnalysisUtils.buildModel(directory);
 
         HashMap<String, Object> resultTotal = new HashMap<>();
@@ -31,11 +32,16 @@ public class CombinedController {
         ArrayList<String> statisticFiler = new ArrayList<>();
         ArrayList<String> couplingFilter = new ArrayList<>();
         ArrayList<String> clusteringFilter = new ArrayList<>();
-        Float CP = 0.5f;
         resultTotal.put("callGraphData", this.getCallingGraphData(model,callFilter));
         resultTotal.put("couplingGraphData",this.getCouplingGraphData(model,couplingFilter));
         resultTotal.put("statisticData",this.getStatisticCalculatorData(model,x,statisticFiler));
-        resultTotal.put("clusterGraphData",this.getClusterGraphData(model,clusteringFilter,CP));
+
+        // Récupère à la fois le dendrogramme du clustering et le dendrogramme des modules
+        Map<String, String> clusterResults = this.getClusterGraphData(model,clusteringFilter,cp);
+        if (clusterResults != null) {
+            resultTotal.put("clusterGraphData", clusterResults.get("dendrogram"));
+            resultTotal.put("modulesGraphData", clusterResults.get("modules"));
+        }
         return resultTotal;
     }
 
@@ -54,14 +60,23 @@ public class CombinedController {
         return callingServices.getGraphAsDot();
     }
 
-    private Object getClusterGraphData(CtModel model,ArrayList<String> filters,float CP){
+    // Retourne un map contenant le DOT du dendrogramme et le DOT des modules (après génération)
+    private Map<String, String> getClusterGraphData(CtModel model,ArrayList<String> filters,float CP){
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
         model.getAllTypes().forEach(type ->{
             type.accept(clusteringVisitor);
         });
         ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,CP);
+        // Lance le clustering hiérarchique
         clusteringServices.clusteringHierarchique();
-        return clusteringServices.getDendrogramDot();
+        String dendrogramDot = clusteringServices.getDendrogramDot();
+        // Génère les modules à partir du cluster final
+        clusteringServices.generateModules();
+        String modulesDot = clusteringServices.getModulesDendogramDot();
+        Map<String, String> result = new HashMap<>();
+        result.put("dendrogram", dendrogramDot);
+        result.put("modules", modulesDot);
+        return result;
     }
 
     private Object getStatisticCalculatorData(CtModel model,int x,ArrayList<String> filters){
@@ -118,6 +133,3 @@ public class CombinedController {
         return resultTotal;
     }
 }
-
- */
-

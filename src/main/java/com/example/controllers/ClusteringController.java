@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.stereotype.Controller;
 import spoon.reflect.CtModel;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,12 +23,17 @@ public class ClusteringController {
             result.put("error", "Impossible de construire le modèle à partir du répertoire fourni.");
             return result;
         }
+        ArrayList<String> excluded = new ArrayList<>();
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
-        model.getAllTypes().forEach(type -> type.accept(clusteringVisitor));
+        model.getAllTypes().stream()
+                .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                .forEach(type -> type.accept(clusteringVisitor));
         ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor, cp);
         clusteringServices.clusteringHierarchique();
         result.put("clusterGraphData", clusteringServices.getDendrogramDot());
+        // Génération et ajout des modules (DOT)
+        clusteringServices.generateModules();
+        result.put("modulesGraphData", clusteringServices.getModulesDendogramDot());
         return result;
     }
 }
-
