@@ -76,17 +76,6 @@ public class ClusteringServices {
 
         return bestCluster;
     }
-    //Récupère l'index d'un cluster dans une liste de cluster
-    /*private int getIndex(Clusterable cluster,ArrayList<Clusterable> clusters) {
-        for (int i = 0; i < clusters.size(); i++) {
-            Clusterable cl = clusters.get(i);
-            if (cluster.equals(cl)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-     */
 
     //Récupère le cluster avec le meilleur couplage avec c1
     private Clusterable getBestCoupling(Clusterable c1, ArrayList<Clusterable> clusters) {
@@ -158,7 +147,6 @@ public class ClusteringServices {
     // moyenne du couplage de ses fils est supérieur au cp
     //Vérifie aussi que le cluster soit meilleur que ses sous-clusters
     private boolean isValidModule(Clusterable c1){
-        List<Clusterable> clusterableList = c1.getDirectClusterables();
         if (!c1.isCluster()){
             return false;
         }
@@ -187,7 +175,6 @@ public class ClusteringServices {
         }
         else {
             return getCouplingBetweenHashMap(c1,c2);
-
         }
     }
 

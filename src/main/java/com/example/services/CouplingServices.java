@@ -33,15 +33,12 @@ public class CouplingServices {
         for (String parentClass : couplingGraph.keySet()) {
             HashMap<String, HashMap<String, Integer>> targetClasses = couplingGraph.get(parentClass);
             if (!classCouplingCount.containsKey(parentClass)) {
-                classCouplingCount.put(parentClass, new HashMap<String,Integer>());
+                classCouplingCount.put(parentClass, new HashMap<>());
             }
             //On regarde toutes les classes cibles de la classe parente
             for (String targetClass : targetClasses.keySet()){
                 //Si la classe cible est déjà présente dans le graphe de couplage on ne l'analyse pas
                 // car le couplage aura déjà été calculé entre ces deux classes
-                //TODO probleme ici ?
-                //!classCouplingCount.containsKey(targetClass)
-                //                        &&
                 if (
                         classes.contains(targetClass) &&
                         !Objects.equals(targetClass, parentClass)
@@ -76,7 +73,9 @@ public class CouplingServices {
                 float coupling = totalcall>0
                         ? (float) v2 /totalcall
                         :0;
-                jsp.put(k2,coupling);
+                if (classCouplingNote.containsKey(k2) && classCouplingNote.get(k2).get(k) != null){}
+                else jsp.put(k2,coupling);
+
             });
             System.out.println(k+"    :     "+v+"     :     "+jsp);
             classCouplingNote.put(k,jsp);
@@ -101,7 +100,7 @@ public class CouplingServices {
     public String getGraphAsDot(){
         StringBuilder dot = new StringBuilder();
         dot.append("graph CouplingGraph {\n");
-        dot.append("\" Total call count : "+ getTotalcall() +" \";\n");
+        dot.append("\" Total call count : ").append(getTotalcall()).append(" \";\n");
         if (classCouplingNote == null || classCouplingNote.isEmpty()) {
             dot.append("}");
             return dot.toString();
@@ -129,8 +128,6 @@ public class CouplingServices {
     }
 
     public String getClassCouplingCountAsString(String name1, String name2){
-        StringBuilder sb = new StringBuilder();
-        sb.append(classCouplingCount.get(name1).get(name2));
-        return sb.toString();
+        return String.valueOf(classCouplingCount.get(name1).get(name2));
     }
 }
