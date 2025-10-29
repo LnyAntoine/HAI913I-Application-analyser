@@ -4,6 +4,7 @@ import com.example.services.CallingServices;
 import com.example.services.CouplingServices;
 import com.example.services.ClusteringServices;
 import com.example.services.StatisticCalculatorServices;
+import com.example.services.ModuleService;
 import com.example.services.visitor.CallingVisitor;
 import com.example.services.visitor.CouplingVisitor;
 import com.example.services.visitor.ClusteringVisitor;
@@ -43,10 +44,12 @@ public class CombinedController {
         resultTotal.put("couplingGraphData",this.getCouplingGraphData(model,couplingFilter,excluded));
         resultTotal.put("statisticData",this.getStatisticCalculatorData(model,x,statisticFiler,excluded));
 
-        // Récupère à la fois le dendrogramme du clustering et le dendrogramme des modules
-        Map<String, String> clusterResults = this.getClusterGraphData(model,clusteringFilter,cp,excluded);
-        resultTotal.put("clusterGraphData", clusterResults.get("dendrogram"));
-        resultTotal.put("modulesGraphData", clusterResults.get("modules"));
+        // Récupère le dendrogramme du clustering
+        String dendrogram = this.getClusterGraphData(model, clusteringFilter, cp, excluded);
+        resultTotal.put("clusterGraphData", dendrogram);
+        // Récupère les modules via le ModuleService (séparé)
+        String modulesDot = this.getModulesGraphData(model, clusteringFilter, cp, excluded);
+        resultTotal.put("modulesGraphData", modulesDot);
         return resultTotal;
     }
 
@@ -75,10 +78,10 @@ public class CombinedController {
         return callingServices.getGraphAsDot();
     }
 
-    // Retourne un map contenant le DOT du dendrogramme et le DOT des modules (après génération)
-    private Map<String, String> getClusterGraphData(CtModel model,ArrayList<String> filters,float CP,ArrayList<String> excluded){
+    // Retourne le DOT du dendrogramme (clustering uniquement)
+    private String getClusterGraphData(CtModel model,ArrayList<String> filters,float CP,ArrayList<String> excluded){
         ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
-        if (filters != null && !filters.isEmpty())
+        if (excluded != null && !excluded.isEmpty())
             model.getAllTypes().stream()
                     .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
                     .forEach(type -> type.accept(clusteringVisitor));
@@ -87,14 +90,20 @@ public class CombinedController {
         ClusteringServices clusteringServices = new ClusteringServices(clusteringVisitor,CP);
         // Lance le clustering hiérarchique
         clusteringServices.clusteringHierarchique();
-        String dendrogramDot = clusteringServices.getDendrogramDot();
-        // Génère les modules à partir du cluster final
-        clusteringServices.generateModules();
-        String modulesDot = clusteringServices.getModulesDendogramDot();
-        Map<String, String> result = new HashMap<>();
-        result.put("dendrogram", dendrogramDot);
-        result.put("modules", modulesDot);
-        return result;
+        return clusteringServices.getDendrogramDot();
+    }
+
+    // Retourne le DOT des modules (séparé)
+    private String getModulesGraphData(CtModel model,ArrayList<String> filters,float CP,ArrayList<String> excluded){
+        ClusteringVisitor clusteringVisitor = new ClusteringVisitor();
+        if (excluded != null && !excluded.isEmpty())
+            model.getAllTypes().stream()
+                    .filter(ctType -> !excluded.contains(ctType.getQualifiedName()))
+                    .forEach(type -> type.accept(clusteringVisitor));
+        else
+            model.getAllTypes().forEach(type -> type.accept(clusteringVisitor));
+        ModuleService moduleService = new ModuleService(clusteringVisitor, CP);
+        return moduleService.generateModulesDot();
     }
 
     private Object getStatisticCalculatorData(CtModel model,int x,ArrayList<String> filters,ArrayList<String> excluded){

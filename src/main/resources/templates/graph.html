@@ -26,7 +26,7 @@
         /* Directory list */
         .dirEntry { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
         .dirEntry input[type="text"] { flex:1; }
-        .dirEntry button { width:28px; height:28px; padding:0; }
+        .dirEntry button { width:28px, height:28px; padding:0; }
         #addDirBtn { margin-left:4px; }
     </style>
 </head>
@@ -281,7 +281,8 @@
                 body = dirParams + (excludedParams ? '&' + excludedParams : '') + '&cp=' + encodeURIComponent(cp);
             } else if (type === 'modules') {
                 // reuse clustering endpoint which will now also return modulesGraphData
-                url = '/analyze/clustering';
+                // use dedicated modules endpoint
+                url = '/analyze/modules';
                 body = dirParams + (excludedParams ? '&' + excludedParams : '') + '&cp=' + encodeURIComponent(cp);
             } else if (type === 'statistics') {
                 url = '/analyze/statistics';

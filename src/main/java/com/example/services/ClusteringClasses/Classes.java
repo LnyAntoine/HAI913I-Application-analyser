@@ -6,7 +6,6 @@ public class Classes extends Clusterable {
     private final String name;
     private Float internalCouplingValue;
 
-    //TODO donner une valeur de couplage interne
     public Classes(String name) {
         this.name = name;
         this.internalCouplingValue = 0f;

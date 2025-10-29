@@ -15,7 +15,6 @@ public class ClusteringServices {
     private HashMap<String,HashMap<String,Float>> classCouplingNote;
     private ArrayList<String> classes;
     private Clusterable finalCluster;
-    private List<Clusterable> modules;
     private final DendrogramDotGenerator dotGenerator;
     private final float cp;
 
@@ -87,7 +86,6 @@ public class ClusteringServices {
             if (c1 != c2) {
                 //On récupère le coupling avec c2
                 float coupling = getCouplingBetween(c1,c2);
-                //float coupling = getCouplingBetween(c1,c2);
                 //On regarde si c'est le meilleur coupling possible
                 if (coupling > bestCoupling) {
                     bestCoupling = coupling;
@@ -121,52 +119,6 @@ public class ClusteringServices {
         }
         System.out.println(" classcouplingnote : "+classCouplingNote);
 
-    }
-
-    //Génère les modules à partir du cluster final
-    public void generateModules(){
-        modules = getModules(finalCluster);
-    }
-
-    //Récupère tous les modules valides et les classes esseulés d'un clusterable
-    private List<Clusterable> getModules(Clusterable c){
-        if (!c.isCluster()) return c.getDirectClusterables();
-        if (isValidModule(c)){
-            List<Clusterable> sons = new ArrayList<>(c.getAllClasses());
-            Clusterable module = new Cluster(sons,getAverageSonCoupling(c));
-            return List.of(module);
-        }
-        List<Clusterable> finalList = new ArrayList<>();
-        for (Clusterable cl : c.getDirectClusterables()){
-            finalList.addAll(getModules(cl));
-        }
-        return finalList;
-    }
-
-    //Un module est valide si la
-    // moyenne du couplage de ses fils est supérieur au cp
-    //Vérifie aussi que le cluster soit meilleur que ses sous-clusters
-    private boolean isValidModule(Clusterable c1){
-        if (!c1.isCluster()){
-            return false;
-        }
-        float averageSonCoupling = getAverageSonCoupling(c1);
-        return (averageSonCoupling) >= cp
-                && c1.getCouplingValue() >= (averageSonCoupling);
-    }
-
-    private float getAverageSonCoupling(Clusterable c1){
-        List<Clusterable> clusterableList = c1.getDirectClusterables();
-        float totalSonCoupling = 0;
-        int numberOfSons = 0;
-        for (Clusterable son : clusterableList){
-            numberOfSons++;
-            totalSonCoupling += son.getCouplingValue();
-        }
-        if (numberOfSons==0){
-            return 0f;
-        }
-        return totalSonCoupling/numberOfSons;
     }
 
     private float getCouplingBetween(Clusterable c1, Clusterable c2){
@@ -284,18 +236,6 @@ public class ClusteringServices {
         if (totalCall > 0){CM = CM/totalCall;}
         if (totalFields > 0){CA = CA/totalFields;}
         if (totalParams > 0){CP = CP/totalParams;}
-        /*if (c1.getName().toLowerCase().contains("clusteringservices")) {
-            System.out.println(c1.getName() +" | "+ c2.getName());
-            System.out.println(CM+" | "+CA+" | "+CP);
-            System.out.println((CM+CA+CP)/3);
-            System.out.println("Total classes : "+totalClasses);
-            System.out.println("Total call : "+totalCall);
-            System.out.println("Total fields : "+totalFields);
-            System.out.println("Total params : "+totalParams);
-
-        }
-         */
-
 
         return (CM+CA+CP)/3;
     }
@@ -379,49 +319,13 @@ public class ClusteringServices {
         return totalCall;
     }
 
-    //Calcule le nombre d'appels internes de méthodes pour un clusterable
-    private int getInternalCall(Clusterable c1){
-        int internalCall = 0;
-        HashMap<String,
-                HashMap<String,
-                                HashMap<String,
-                                        HashMap<String,
-                                                Integer>>>> clusteringInvocationMap = clusteringVisitor.getClusteringInvocationMap();
-        for (Clusterable bbC1 : c1.getClusterables()){
-            if (bbC1.isCluster()){
-                //On ignore les clusters qui sont mis dans la liste
-                // des clusterable (leur classe est déjà présente)
-                continue;
-            }
-            if (clusteringInvocationMap.containsKey(bbC1.getName())) {
-                HashMap<String, HashMap<String, HashMap<String, Integer>>> relationsMap = clusteringInvocationMap.get(bbC1.getName());
-                for (Clusterable bbC2 : c1.getClusterables()) {
-                    if (bbC2.isCluster()){
-                        //On ignore les clusters qui sont mis dans la liste
-                        // des clusterable (leur classe est déjà présente)
-                        continue;
-                    }
-                    if (relationsMap.containsKey(bbC2.getName())) {
-                        HashMap<String, HashMap<String, Integer>> methodsMap = relationsMap.get(bbC2.getName());
-                        for (String methodName : methodsMap.keySet()) {
-                            HashMap<String, Integer> optionsMap = methodsMap.get(methodName);
-                            if (optionsMap.containsKey("call")) {
-                                internalCall += optionsMap.get("call");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return internalCall;
+    // Expose le cluster final pour permettre la génération de modules dans ModuleService
+    public Clusterable getFinalCluster() {
+        return finalCluster;
     }
-
-    public String getModulesDendogramDot(){
-        return dotGenerator.generateDotFromList(modules);
-    }
-    //Génère le DOT du dendrogramme du clustering
-    public String getDendrogramDot() {
-        return dotGenerator.generateDot(finalCluster);
-    }
+     //Génère le DOT du dendrogramme du clustering
+     public String getDendrogramDot() {
+         return dotGenerator.generateDot(finalCluster);
+     }
 
 }

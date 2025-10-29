@@ -50,17 +50,22 @@ public class DendrogramDotGenerator {
 
         for (Clusterable root : roots) {
             if (root == null) continue;
-            int sg = subgraphCounter.getAndIncrement();
-            // subgraph pour séparer visuellement chaque racine
-            sb.append(String.format("subgraph cluster_%d {\n", sg));
-            sb.append("color=lightgrey;\n");
-            String rootLabel = safeLabel(root.getName());
-            sb.append(String.format("label=\"%s\";\n", rootLabel));
+            // Si la racine est un cluster, on la place dans un subgraph pour la séparer visuellement
+            if (root.isCluster()) {
+                int sg = subgraphCounter.getAndIncrement();
+                sb.append(String.format("subgraph cluster_%d {\n", sg));
+                sb.append("color=lightgrey;\n");
+                String rootLabel = safeLabel(root.getName());
+                sb.append(String.format("label=\"%s\";\n", rootLabel));
 
-            // construire récursivement les nœuds/edges pour cette racine
-            buildDotRecursive(root, sb, idMap, counter);
+                // construire récursivement les nœuds/edges pour cette racine (dans le subgraph)
+                buildDotRecursive(root, sb, idMap, counter);
 
-            sb.append("}\n");
+                sb.append("}\n");
+            } else {
+                // Si ce n'est pas un cluster, l'ajouter directement au graphe principal
+                buildDotRecursive(root, sb, idMap, counter);
+            }
         }
 
         sb.append("}\n");
