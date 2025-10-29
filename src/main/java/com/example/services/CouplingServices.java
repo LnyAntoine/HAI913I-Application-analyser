@@ -16,6 +16,7 @@ public class CouplingServices {
     public CouplingServices(CouplingVisitor visitor) {
         this.visitor = visitor;
     }
+    //Gère la génération du graphe de couplage avec ou sans filtre
     public void generateGraphFilter(ArrayList<String> filters) {
         if (filters == null || filters.isEmpty()) {
             generateGraph();
@@ -23,6 +24,7 @@ public class CouplingServices {
             generateGraph();
         }
     }
+    //Génère le graphe de couplage sans filtre
     public void generateGraph(){
         totalcall = 0;
         couplingGraph = visitor.getCouplingGraph();
@@ -81,22 +83,11 @@ public class CouplingServices {
             classCouplingNote.put(k,jsp);
         });
     }
-
-    public HashMap<String, HashMap<String, HashMap<String, Integer>>> getCouplingGraph() {
-        return couplingGraph;
-    }
-
+    //Retourne le nombre total d'appels entre les classes
     public int getTotalcall() {
         return totalcall;
     }
-
-    public HashMap<String, HashMap<String, Float>> getClassCouplingNote() {
-        return classCouplingNote;
-    }
-
-    public HashMap<String, HashMap<String, Integer>> getClassCouplingCount() {
-        return classCouplingCount;
-    }
+    //Génère une représentation DOT du graphe de couplage
     public String getGraphAsDot(){
         StringBuilder dot = new StringBuilder();
         dot.append("graph CouplingGraph {\n");

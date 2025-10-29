@@ -6,7 +6,7 @@ import java.util.List;
 
 public class Cluster extends Clusterable {
     private final ArrayList<Clusterable> clusterables;
-    private float clusterValue;
+    private final float clusterValue;
 
     public Cluster(Clusterable clusterable1, Clusterable clusterable2,float clusterValue) {
         this.clusterables = new ArrayList<>(Arrays.asList(clusterable1, clusterable2));
